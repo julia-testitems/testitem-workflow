@@ -201,7 +201,7 @@ jobs:
           pattern: testitemresults-*
           path: testresults
           merge-multiple: true
-      - uses: julia-actions/julia-report-ci-results@v1
+      - uses: julia-actions/julia-report-ci-results@main
         with:
           results-path: testresults
           lint-results: ${{ needs.lint.outputs.lint-results }}
