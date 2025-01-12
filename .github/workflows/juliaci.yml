@@ -171,7 +171,7 @@ jobs:
       run: julia ${{ inputs.github_job_prep_script }}
       shell: bash
     - name: Run tests
-      uses: julia-actions/julia-run-testitems@v1
+      uses: julia-actions/julia-run-testitems@main
       with:
         juliaup-channel: ${{ matrix.juliaup-channel }}
         results-path: ${{ format('testitemresults-{0}-{1}.json', matrix.os, matrix.juliaup-channel) }}
