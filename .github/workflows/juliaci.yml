@@ -63,6 +63,10 @@ on:
         type: string
         required: false
         default: ""
+      filter:
+        type: string
+        required: false
+        default: ""
       github_job_prep_script:
         type: string
         required: false
@@ -176,6 +180,7 @@ jobs:
         juliaup-channel: ${{ matrix.juliaup-channel }}
         results-path: ${{ format('testitemresults-{0}-{1}.json', matrix.os, matrix.juliaup-channel) }}
         env: ${{ inputs.env }}
+        filter: ${{ inputs.filter }}
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
