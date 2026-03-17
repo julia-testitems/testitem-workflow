@@ -48,6 +48,7 @@ The `juliaci.yml` workflow accepts a number of configuration options that contro
 - `env` (JSON string): By passing a JSON string one can set environment variables for the Julia process that executes test items. For example `env: '{"FOO": "BAR"}'` would set an environment variable named `FOO` to the value `BAR`.
 - `filter` (string, default `""`): A Julia expression used to filter which test items are run. The expression can reference the variables `name` (test item name), `tags` (vector of `Symbol` tags), `filename` (file path), and `package_name`. It should evaluate to `true` to include a test item and `false` to exclude it. The working directory is set to the repository root when the filter is evaluated. For example, `filter: '!(:slow in tags)'` would skip all test items tagged with `:slow`.
 - `github_job_prep_script`: Path to a Julia file that is run once on each GitHub worker before tests are executed.
+- `testitem-timeout` (number, default `1200`): Per test item timeout in seconds. If a single test item takes longer than this duration, it will be terminated and reported as errored. The default is 1200 seconds (20 minutes).
 
 In the following example tests are run on release candidate versions if they are available:
 

@@ -71,6 +71,10 @@ on:
         type: string
         required: false
         default: ""
+      testitem-timeout:
+        type: number
+        required: false
+        default: 1200
     secrets:
       codecov_token:
         required: true
@@ -181,6 +185,7 @@ jobs:
         results-path: ${{ format('testitemresults-{0}-{1}.json', matrix.os, matrix.juliaup-channel) }}
         env: ${{ inputs.env }}
         filter: ${{ inputs.filter }}
+        testitem-timeout: ${{ inputs.testitem-timeout }}
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
