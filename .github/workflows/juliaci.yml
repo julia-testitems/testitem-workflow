@@ -182,6 +182,7 @@ jobs:
       uses: julia-actions/julia-run-testitems@main
       with:
         juliaup-channel: ${{ matrix.juliaup-channel }}
+        profile-name: ${{ format('Julia {0}:{1}', matrix.juliaup-channel, matrix.os) }}
         results-path: ${{ format('testitemresults-{0}-{1}.json', matrix.os, matrix.juliaup-channel) }}
         env: ${{ inputs.env }}
         filter: ${{ inputs.filter }}
