@@ -22,7 +22,7 @@ on:
 
 jobs:
   julia-ci:
-    uses: julia-vscode/testitem-workflow/.github/workflows/juliaci.yml@v1
+    uses: julia-testitems/testitem-workflow/.github/workflows/juliaci.yml@v1
     permissions: write-all
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -64,7 +64,7 @@ on:
 
 jobs:
   julia-ci:
-    uses: julia-vscode/testitem-workflow/.github/workflows/juliaci.yml@v1
+    uses: julia-testitems/testitem-workflow/.github/workflows/juliaci.yml@v1
     with:
       include-rc-versions: true
     permissions: write-all
