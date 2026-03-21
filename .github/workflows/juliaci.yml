@@ -384,7 +384,7 @@ jobs:
     outputs:
       lint-results: ${{ steps.lint-step.outputs.lint-results }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: julia-actions/julia-lint@v1
         id: lint-step
 
@@ -392,7 +392,7 @@ jobs:
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: julia-actions/install-juliaup@v2
         if: ${{ hashFiles('.JuliaFormatter.toml') != '' }}
         with:
@@ -485,7 +485,7 @@ jobs:
           echo "filter=$(resolve filter)" >> "$GITHUB_OUTPUT"
           echo "github_job_prep_script=$(resolve github_job_prep_script)" >> "$GITHUB_OUTPUT"
           echo "testitem-timeout=$(resolve testitem-timeout)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: julia-actions/julia-compute-test-matrix@v1
         id: compute-test-matrix
         with:
@@ -513,7 +513,7 @@ jobs:
           include: ${{ fromJson(needs.compute-test-matrix.outputs.test-matrix) }}
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - uses: julia-actions/install-juliaup@v2
       with:
         channel:  ${{ matrix.juliaup-channel }}
@@ -531,7 +531,7 @@ jobs:
         env: ${{ needs.compute-test-matrix.outputs.env }}
         filter: ${{ needs.compute-test-matrix.outputs.filter }}
         testitem-timeout: ${{ needs.compute-test-matrix.outputs.testitem-timeout }}
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: ${{ !cancelled() }}
       with:
         name: ${{ format('testitemresults-{0}-{1}', matrix.os, matrix.juliaup-channel) }}
@@ -539,7 +539,7 @@ jobs:
         retention-days: 1
     - uses: julia-actions/julia-processcoverage@v1
       if: ${{ !cancelled() }}
-    - uses: codecov/codecov-action@v4
+    - uses: codecov/codecov-action@v5
       if: ${{ !cancelled() }}
       with:
         files: ./lcov.info
@@ -551,7 +551,7 @@ jobs:
     if: ${{ always() && (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: testitemresults-*
           path: testresults
@@ -560,7 +560,7 @@ jobs:
         with:
           results-path: testresults
           lint-results: ${{ needs.lint.outputs.lint-results }}
-      - uses: geekyeggo/delete-artifact@v5
+      - uses: geekyeggo/delete-artifact@v6
         with:
           name: testitemresults-*
 
@@ -568,7 +568,7 @@ jobs:
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'DocDeploy') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Check file existence
         id: check_files
         uses: andstor/file-existence-action@v3
