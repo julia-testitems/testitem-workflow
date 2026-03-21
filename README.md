@@ -15,7 +15,7 @@ name: Julia CI
 
 on:
   push: {branches: [main,master]}
-  pull_request: {types: [opened,synchronize,reopened]}
+  pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
   issue_comment: {types: [created]}
   schedule: [{cron: '0 0 * * *'}]
   workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [CompatHelper,DocDeploy,LintAndTest,TagBot]}}}
@@ -50,6 +50,44 @@ The `juliaci.yml` workflow accepts a number of configuration options that contro
 - `github_job_prep_script`: Path to a Julia file that is run once on each GitHub worker before tests are executed.
 - `testitem-timeout` (number, default `1200`): Per test item timeout in seconds. If a single test item takes longer than this duration, it will be terminated and reported as errored. The default is 1200 seconds (20 minutes).
 
+### Trigger-specific overrides
+
+Any of the above options can be overridden for a specific trigger scenario by prefixing the input name with one of the following:
+
+- `draft-pr-` — run was triggered by a pull request in draft state
+- `pr-` — run was triggered by a non-draft pull request
+- `main-` — run was triggered by a push to main or master
+- `manual-trigger-` — run was triggered via workflow dispatch
+
+Override inputs are strings (`true`/`false` for boolean options). If an override is not set, the base input value is used. Note that `draft-pr-` and `pr-` are mutually exclusive — a draft PR run only picks up `draft-pr-` overrides, not `pr-` overrides.
+
+In the following example, draft PRs run only on the release version and Linux x64 to get a quick signal, while full testing applies to all other triggers:
+
+```yml
+name: Julia CI
+
+on:
+  push: {branches: [main,master]}
+  pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
+  issue_comment: {types: [created]}
+  schedule: [{cron: '0 0 * * *'}]
+  workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [CompatHelper,DocDeploy,LintAndTest,TagBot]}}}
+
+jobs:
+  julia-ci:
+    uses: julia-testitems/testitem-workflow/.github/workflows/juliaci.yml@v1
+    with:
+      draft-pr-include-lts-versions: false
+      draft-pr-include-windows-x64: false
+      draft-pr-include-windows-x86: false
+      draft-pr-include-linux-x86: false
+      draft-pr-include-macos-x64: false
+      draft-pr-include-macos-aarch64: false
+    permissions: write-all
+    secrets:
+      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+```
+
 In the following example tests are run on release candidate versions if they are available:
 
 ```yml
@@ -57,7 +95,7 @@ name: Julia CI
 
 on:
   push: {branches: [main,master]}
-  pull_request: {types: [opened,synchronize,reopened]}
+  pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
   issue_comment: {types: [created]}
   schedule: [{cron: '0 0 * * *'}]
   workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [CompatHelper,DocDeploy,LintAndTest,TagBot]}}}

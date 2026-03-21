@@ -75,6 +75,298 @@ on:
         type: number
         required: false
         default: 1200
+      # Overrides for draft PR runs
+      draft-pr-include-release-versions:
+        type: string
+        required: false
+        default: ""
+      draft-pr-include-lts-versions:
+        type: string
+        required: false
+        default: ""
+      draft-pr-include-all-compatible-minor-versions:
+        type: string
+        required: false
+        default: ""
+      draft-pr-include-smallest-compatible-minor-versions:
+        type: string
+        required: false
+        default: ""
+      draft-pr-include-rc-versions:
+        type: string
+        required: false
+        default: ""
+      draft-pr-include-beta-versions:
+        type: string
+        required: false
+        default: ""
+      draft-pr-include-alpha-versions:
+        type: string
+        required: false
+        default: ""
+      draft-pr-include-nightly-versions:
+        type: string
+        required: false
+        default: ""
+      draft-pr-include-windows-x64:
+        type: string
+        required: false
+        default: ""
+      draft-pr-include-windows-x86:
+        type: string
+        required: false
+        default: ""
+      draft-pr-include-linux-x64:
+        type: string
+        required: false
+        default: ""
+      draft-pr-include-linux-x86:
+        type: string
+        required: false
+        default: ""
+      draft-pr-include-macos-x64:
+        type: string
+        required: false
+        default: ""
+      draft-pr-include-macos-aarch64:
+        type: string
+        required: false
+        default: ""
+      draft-pr-env:
+        type: string
+        required: false
+        default: ""
+      draft-pr-filter:
+        type: string
+        required: false
+        default: ""
+      draft-pr-github_job_prep_script:
+        type: string
+        required: false
+        default: ""
+      draft-pr-testitem-timeout:
+        type: string
+        required: false
+        default: ""
+      # Overrides for non-draft PR runs
+      pr-include-release-versions:
+        type: string
+        required: false
+        default: ""
+      pr-include-lts-versions:
+        type: string
+        required: false
+        default: ""
+      pr-include-all-compatible-minor-versions:
+        type: string
+        required: false
+        default: ""
+      pr-include-smallest-compatible-minor-versions:
+        type: string
+        required: false
+        default: ""
+      pr-include-rc-versions:
+        type: string
+        required: false
+        default: ""
+      pr-include-beta-versions:
+        type: string
+        required: false
+        default: ""
+      pr-include-alpha-versions:
+        type: string
+        required: false
+        default: ""
+      pr-include-nightly-versions:
+        type: string
+        required: false
+        default: ""
+      pr-include-windows-x64:
+        type: string
+        required: false
+        default: ""
+      pr-include-windows-x86:
+        type: string
+        required: false
+        default: ""
+      pr-include-linux-x64:
+        type: string
+        required: false
+        default: ""
+      pr-include-linux-x86:
+        type: string
+        required: false
+        default: ""
+      pr-include-macos-x64:
+        type: string
+        required: false
+        default: ""
+      pr-include-macos-aarch64:
+        type: string
+        required: false
+        default: ""
+      pr-env:
+        type: string
+        required: false
+        default: ""
+      pr-filter:
+        type: string
+        required: false
+        default: ""
+      pr-github_job_prep_script:
+        type: string
+        required: false
+        default: ""
+      pr-testitem-timeout:
+        type: string
+        required: false
+        default: ""
+      # Overrides for push to main/master runs
+      main-include-release-versions:
+        type: string
+        required: false
+        default: ""
+      main-include-lts-versions:
+        type: string
+        required: false
+        default: ""
+      main-include-all-compatible-minor-versions:
+        type: string
+        required: false
+        default: ""
+      main-include-smallest-compatible-minor-versions:
+        type: string
+        required: false
+        default: ""
+      main-include-rc-versions:
+        type: string
+        required: false
+        default: ""
+      main-include-beta-versions:
+        type: string
+        required: false
+        default: ""
+      main-include-alpha-versions:
+        type: string
+        required: false
+        default: ""
+      main-include-nightly-versions:
+        type: string
+        required: false
+        default: ""
+      main-include-windows-x64:
+        type: string
+        required: false
+        default: ""
+      main-include-windows-x86:
+        type: string
+        required: false
+        default: ""
+      main-include-linux-x64:
+        type: string
+        required: false
+        default: ""
+      main-include-linux-x86:
+        type: string
+        required: false
+        default: ""
+      main-include-macos-x64:
+        type: string
+        required: false
+        default: ""
+      main-include-macos-aarch64:
+        type: string
+        required: false
+        default: ""
+      main-env:
+        type: string
+        required: false
+        default: ""
+      main-filter:
+        type: string
+        required: false
+        default: ""
+      main-github_job_prep_script:
+        type: string
+        required: false
+        default: ""
+      main-testitem-timeout:
+        type: string
+        required: false
+        default: ""
+      # Overrides for manual workflow_dispatch runs
+      manual-trigger-include-release-versions:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-include-lts-versions:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-include-all-compatible-minor-versions:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-include-smallest-compatible-minor-versions:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-include-rc-versions:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-include-beta-versions:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-include-alpha-versions:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-include-nightly-versions:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-include-windows-x64:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-include-windows-x86:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-include-linux-x64:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-include-linux-x86:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-include-macos-x64:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-include-macos-aarch64:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-env:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-filter:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-github_job_prep_script:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-testitem-timeout:
+        type: string
+        required: false
+        default: ""
     secrets:
       codecov_token:
         required: true
@@ -82,7 +374,7 @@ on:
 permissions: write-all
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.actor }}-${{ github.event_name }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
@@ -100,7 +392,7 @@ jobs:
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4      
+      - uses: actions/checkout@v4
       - uses: julia-actions/install-juliaup@v2
         if: ${{ hashFiles('.JuliaFormatter.toml') != '' }}
         with:
@@ -126,7 +418,7 @@ jobs:
               >&2 echo "Some files have not been formatted !!!"
               echo "$output"
               exit 1
-          fi          
+          fi
       - name: 'Suggest'
         if: ${{ failure() && hashFiles('.JuliaFormatter.toml') != '' }}
         uses: reviewdog/action-suggester@v1
@@ -140,25 +432,77 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       test-matrix: ${{ steps.compute-test-matrix.outputs.test-matrix }}
+      env: ${{ steps.resolve.outputs.env }}
+      filter: ${{ steps.resolve.outputs.filter }}
+      github_job_prep_script: ${{ steps.resolve.outputs.github_job_prep_script }}
+      testitem-timeout: ${{ steps.resolve.outputs.testitem-timeout }}
     steps:
+      - id: resolve
+        shell: bash
+        env:
+          INPUTS_JSON: ${{ toJson(inputs) }}
+          IS_DRAFT_PR: ${{ github.event.pull_request.draft }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [[ "$IS_DRAFT_PR" == "true" ]]; then
+            prefix="draft-pr-"
+          elif [[ "$EVENT_NAME" == "pull_request" ]]; then
+            prefix="pr-"
+          elif [[ "$EVENT_NAME" == "push" ]]; then
+            prefix="main-"
+          elif [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            prefix="manual-trigger-"
+          else
+            prefix=""
+          fi
+
+          resolve() {
+            local key="$1"
+            local override
+            override=$(echo "$INPUTS_JSON" | jq -r --arg k "${prefix}${key}" '.[$k] // ""')
+            if [[ -n "$override" ]]; then
+              echo "$override"
+            else
+              echo "$INPUTS_JSON" | jq -r --arg k "$key" '.[$k] | tostring'
+            fi
+          }
+
+          echo "include-release-versions=$(resolve include-release-versions)" >> "$GITHUB_OUTPUT"
+          echo "include-lts-versions=$(resolve include-lts-versions)" >> "$GITHUB_OUTPUT"
+          echo "include-all-compatible-minor-versions=$(resolve include-all-compatible-minor-versions)" >> "$GITHUB_OUTPUT"
+          echo "include-smallest-compatible-minor-versions=$(resolve include-smallest-compatible-minor-versions)" >> "$GITHUB_OUTPUT"
+          echo "include-rc-versions=$(resolve include-rc-versions)" >> "$GITHUB_OUTPUT"
+          echo "include-beta-versions=$(resolve include-beta-versions)" >> "$GITHUB_OUTPUT"
+          echo "include-alpha-versions=$(resolve include-alpha-versions)" >> "$GITHUB_OUTPUT"
+          echo "include-nightly-versions=$(resolve include-nightly-versions)" >> "$GITHUB_OUTPUT"
+          echo "include-windows-x64=$(resolve include-windows-x64)" >> "$GITHUB_OUTPUT"
+          echo "include-windows-x86=$(resolve include-windows-x86)" >> "$GITHUB_OUTPUT"
+          echo "include-linux-x64=$(resolve include-linux-x64)" >> "$GITHUB_OUTPUT"
+          echo "include-linux-x86=$(resolve include-linux-x86)" >> "$GITHUB_OUTPUT"
+          echo "include-macos-x64=$(resolve include-macos-x64)" >> "$GITHUB_OUTPUT"
+          echo "include-macos-aarch64=$(resolve include-macos-aarch64)" >> "$GITHUB_OUTPUT"
+          echo "env=$(resolve env)" >> "$GITHUB_OUTPUT"
+          echo "filter=$(resolve filter)" >> "$GITHUB_OUTPUT"
+          echo "github_job_prep_script=$(resolve github_job_prep_script)" >> "$GITHUB_OUTPUT"
+          echo "testitem-timeout=$(resolve testitem-timeout)" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
       - uses: julia-actions/julia-compute-test-matrix@v1
         id: compute-test-matrix
         with:
-          include-release-versions: ${{ inputs.include-release-versions }}
-          include-lts-versions: ${{ inputs.include-lts-versions }}
-          include-all-compatible-minor-versions: ${{ inputs.include-all-compatible-minor-versions }}
-          include-smallest-compatible-minor-versions: ${{ inputs.include-smallest-compatible-minor-versions }}
-          include-rc-versions: ${{ inputs.include-rc-versions }}
-          include-beta-versions: ${{ inputs.include-beta-versions }}
-          include-alpha-versions: ${{ inputs.include-alpha-versions }}
-          include-nightly-versions: ${{ inputs.include-nightly-versions }}
-          include-windows-x64: ${{ inputs.include-windows-x64 }}
-          include-windows-x86: ${{ inputs.include-windows-x86 }}
-          include-linux-x64: ${{ inputs.include-linux-x64 }}
-          include-linux-x86: ${{ inputs.include-linux-x86 }}
-          include-macos-x64: ${{ inputs.include-macos-x64 }}
-          include-macos-aarch64: ${{ inputs.include-macos-aarch64 }}
+          include-release-versions: ${{ steps.resolve.outputs.include-release-versions }}
+          include-lts-versions: ${{ steps.resolve.outputs.include-lts-versions }}
+          include-all-compatible-minor-versions: ${{ steps.resolve.outputs.include-all-compatible-minor-versions }}
+          include-smallest-compatible-minor-versions: ${{ steps.resolve.outputs.include-smallest-compatible-minor-versions }}
+          include-rc-versions: ${{ steps.resolve.outputs.include-rc-versions }}
+          include-beta-versions: ${{ steps.resolve.outputs.include-beta-versions }}
+          include-alpha-versions: ${{ steps.resolve.outputs.include-alpha-versions }}
+          include-nightly-versions: ${{ steps.resolve.outputs.include-nightly-versions }}
+          include-windows-x64: ${{ steps.resolve.outputs.include-windows-x64 }}
+          include-windows-x86: ${{ steps.resolve.outputs.include-windows-x86 }}
+          include-linux-x64: ${{ steps.resolve.outputs.include-linux-x64 }}
+          include-linux-x86: ${{ steps.resolve.outputs.include-linux-x86 }}
+          include-macos-x64: ${{ steps.resolve.outputs.include-macos-x64 }}
+          include-macos-aarch64: ${{ steps.resolve.outputs.include-macos-aarch64 }}
 
   run-tests:
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
@@ -175,8 +519,8 @@ jobs:
         channel:  ${{ matrix.juliaup-channel }}
     - uses: julia-actions/julia-buildpkg@v1
     - name: Run worker prep script
-      if: ${{ inputs.github_job_prep_script != '' }}
-      run: julia ${{ inputs.github_job_prep_script }}
+      if: ${{ needs.compute-test-matrix.outputs.github_job_prep_script != '' }}
+      run: julia ${{ needs.compute-test-matrix.outputs.github_job_prep_script }}
       shell: bash
     - name: Run tests
       uses: julia-actions/julia-run-testitems@main
@@ -184,9 +528,9 @@ jobs:
         juliaup-channel: ${{ matrix.juliaup-channel }}
         profile-name: ${{ format('Julia {0}:{1}', matrix.juliaup-channel, matrix.os) }}
         results-path: ${{ format('testitemresults-{0}-{1}.json', matrix.os, matrix.juliaup-channel) }}
-        env: ${{ inputs.env }}
-        filter: ${{ inputs.filter }}
-        testitem-timeout: ${{ inputs.testitem-timeout }}
+        env: ${{ needs.compute-test-matrix.outputs.env }}
+        filter: ${{ needs.compute-test-matrix.outputs.filter }}
+        testitem-timeout: ${{ needs.compute-test-matrix.outputs.testitem-timeout }}
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
@@ -285,4 +629,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMPATHELPER_PRIV: ${{ secrets.DOCUMENTER_KEY }}
-          # COMPATHELPER_PRIV: ${{ secrets.COMPATHELPER_PRIV }}          
+          # COMPATHELPER_PRIV: ${{ secrets.COMPATHELPER_PRIV }}
