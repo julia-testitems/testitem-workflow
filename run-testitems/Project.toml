@@ -1,0 +1,7 @@
+[deps]
+GitHubActions = "6b79fd1a-b13a-48ab-b6b0-aaee1fee41df"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+JuliaWorkspaces = "e554591c-7f10-434f-9f27-2097f62a04fd"
+Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
+TestItemControllers = "340407ab-12a4-4a78-8da2-3de3b3fd1448"
+TestItemRunnerCore = "f0955e71-0b96-4c6b-b0a1-15a26c19f143"

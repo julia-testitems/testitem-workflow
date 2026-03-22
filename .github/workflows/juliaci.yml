@@ -514,23 +514,44 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v6
-    - uses: julia-actions/install-juliaup@v2
+    - name: Install Julia platform channel
+      uses: julia-actions/install-juliaup@v2
       with:
         channel:  ${{ matrix.juliaup-channel }}
-    - uses: julia-actions/julia-buildpkg@v1
+    - name: Install Julia release channel
+      run: juliaup add release
+    - name: Compute cache keys
+      id: setup
+      shell: bash
+      run: |
+        echo "JULIA_VERSION=$(julia -v)" >> $GITHUB_OUTPUT
+        echo "JULIA_RELEASE_VERSION=$(julia +release -v)" >> $GITHUB_OUTPUT
+        echo "MANIFEST_HASH=$(sha256sum "$GITHUB_WORKSPACE/run-testitems/Manifest.toml" | cut -d ' ' -f1)" >> $GITHUB_OUTPUT
+    - uses: actions/cache@v5
+      id: cache-step
+      with:
+        path: ~/.julia
+        key: julia-run-testitems-v3-${{ runner.os }}-${{ steps.setup.outputs.JULIA_VERSION }}-${{ steps.setup.outputs.JULIA_RELEASE_VERSION }}-${{ steps.setup.outputs.MANIFEST_HASH }}
+    - name: Instantiate test runner
+      if: steps.cache-step.outputs.cache-hit != 'true'
+      run: julia +release -e 'import Pkg; Pkg.instantiate()'
+      shell: bash
+      env:
+        JULIA_PROJECT: ${{ github.workspace }}/run-testitems    
     - name: Run worker prep script
       if: ${{ needs.compute-test-matrix.outputs.github_job_prep_script != '' }}
       run: julia ${{ needs.compute-test-matrix.outputs.github_job_prep_script }}
       shell: bash
-    - name: Run tests
-      uses: julia-actions/julia-run-testitems@main
-      with:
-        juliaup-channel: ${{ matrix.juliaup-channel }}
-        profile-name: ${{ format('Julia {0}:{1}', matrix.juliaup-channel, matrix.os) }}
-        results-path: ${{ format('testitemresults-{0}-{1}.json', matrix.os, matrix.juliaup-channel) }}
-        env: ${{ needs.compute-test-matrix.outputs.env }}
-        filter: ${{ needs.compute-test-matrix.outputs.filter }}
-        testitem-timeout: ${{ needs.compute-test-matrix.outputs.testitem-timeout }}
+    - name: Run test items
+      run: julia +release --project=${{ github.workspace }}/run-testitems ${{ github.workspace }}/run-testitems/main.jl ${{ runner.debug==1 && 'debug' || 'nodebug' }}
+      shell: pwsh
+      env:
+        TEST_JULIAUP_CHANNEL: ${{ matrix.juliaup-channel }}
+        TEST_ENV: ${{ needs.compute-test-matrix.outputs.env }}
+        TEST_FILTER: ${{ needs.compute-test-matrix.outputs.filter }}
+        TEST_TIMEOUT: ${{ needs.compute-test-matrix.outputs.testitem-timeout }}
+        TEST_PROFILE_NAME: ${{ format('Julia {0}:{1}', matrix.juliaup-channel, matrix.os) }}
+        RESULTS_PATH: ${{ format('testitemresults-{0}-{1}.json', matrix.os, matrix.juliaup-channel) }}
     - uses: actions/upload-artifact@v7
       if: ${{ !cancelled() }}
       with:
