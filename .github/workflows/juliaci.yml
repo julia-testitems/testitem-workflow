@@ -548,7 +548,7 @@ jobs:
 
   report-results:
     needs: [run-tests, lint]
-    if: ${{ always() && (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
+    if: ${{ !cancelled() && ((github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest')) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v8
