@@ -2,10 +2,6 @@
 
 This repository provides a reusable GitHub Workflow that lints, runs test items, deploys documentation, checks for compatability updates and creates tags for Julia packages. It only works with packages that use the test item framework.
 
-## PRERELEASE
-
-This is very experimental prerelease software. It might break, not work etc. I will update this notice once it is ready for everyone to use.
-
 ## Getting started
 
 Add the following file as `.github/workflows/juliaci.yml` to the repository of your package:
