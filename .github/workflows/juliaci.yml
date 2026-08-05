@@ -539,7 +539,7 @@ jobs:
         retention-days: 1
     - uses: julia-actions/julia-processcoverage@v1
       if: ${{ !cancelled() }}
-    - uses: codecov/codecov-action@v5
+    - uses: codecov/codecov-action@v7
       if: ${{ !cancelled() }}
       with:
         files: ./lcov.info
