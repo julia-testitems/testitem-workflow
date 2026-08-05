@@ -1,6 +1,6 @@
 # Test item reusable workflow
 
-This repository provides a reusable GitHub Workflow that lints, runs test items, deploys documentation, checks for compatability updates and creates tags for Julia packages. It only works with packages that use the test item framework.
+This repository provides a reusable GitHub Workflow that lints, runs test items, deploys documentation and creates tags for Julia packages. It only works with packages that use the test item framework.
 
 ## Getting started
 
@@ -13,12 +13,11 @@ on:
   push: {branches: [main,master]}
   pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
   issue_comment: {types: [created]}
-  schedule: [{cron: '0 0 * * *'}]
-  workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [CompatHelper,DocDeploy,LintAndTest,TagBot]}}}
+  workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [DocDeploy,LintAndTest,TagBot]}}}
 
 jobs:
   julia-ci:
-    uses: julia-testitems/testitem-workflow/.github/workflows/juliaci.yml@v1
+    uses: julia-testitems/testitem-workflow/.github/workflows/juliaci.yml@v2
     permissions: write-all
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -66,12 +65,11 @@ on:
   push: {branches: [main,master]}
   pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
   issue_comment: {types: [created]}
-  schedule: [{cron: '0 0 * * *'}]
-  workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [CompatHelper,DocDeploy,LintAndTest,TagBot]}}}
+  workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [DocDeploy,LintAndTest,TagBot]}}}
 
 jobs:
   julia-ci:
-    uses: julia-testitems/testitem-workflow/.github/workflows/juliaci.yml@v1
+    uses: julia-testitems/testitem-workflow/.github/workflows/juliaci.yml@v2
     with:
       draft-pr-include-lts-versions: false
       draft-pr-include-windows-x64: false
@@ -93,12 +91,11 @@ on:
   push: {branches: [main,master]}
   pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
   issue_comment: {types: [created]}
-  schedule: [{cron: '0 0 * * *'}]
-  workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [CompatHelper,DocDeploy,LintAndTest,TagBot]}}}
+  workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [DocDeploy,LintAndTest,TagBot]}}}
 
 jobs:
   julia-ci:
-    uses: julia-testitems/testitem-workflow/.github/workflows/juliaci.yml@v1
+    uses: julia-testitems/testitem-workflow/.github/workflows/juliaci.yml@v2
     with:
       include-rc-versions: true
     permissions: write-all
