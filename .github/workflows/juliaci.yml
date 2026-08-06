@@ -388,44 +388,31 @@ jobs:
       - uses: julia-actions/julia-lint@v1
         id: lint-step
 
+  # Check-only formatting gate (the canonical CI mode: fail with a diff, fix
+  # locally). Runs whenever lint/tests run; a repo opts in by having a
+  # JuliaFormat.toml anywhere in its tree — without one, every step no-ops.
   format:
-    if: ${{ github.event_name == 'pull_request' }}
+    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/install-juliaup@v2
-        if: ${{ hashFiles('.JuliaFormatter.toml') != '' }}
+        if: ${{ hashFiles('**/JuliaFormat.toml', '**/juliaformat.toml') != '' }}
         with:
           channel: release
-      - name: "JuliaFormatter"
-        if: ${{ hashFiles('.JuliaFormatter.toml') != '' }}
-        run: |
-          import Pkg
-          Pkg.add("JuliaFormatter")
-        shell: julia --color=yes {0}
-      - name: "Run Julia Formatter"
-        if: ${{ hashFiles('.JuliaFormatter.toml') != '' }}
-        run: |
-          import JuliaFormatter
-          JuliaFormatter.format(".")'
-        shell: julia --color=yes {0}
-      - name: Check for formatting errors
-        if: ${{ hashFiles('.JuliaFormatter.toml') != '' }}
+      - uses: julia-actions/cache@v2
+        if: ${{ hashFiles('**/JuliaFormat.toml', '**/juliaformat.toml') != '' }}
+      - name: Install the JuliaFormat app
+        if: ${{ hashFiles('**/JuliaFormat.toml', '**/juliaformat.toml') != '' }}
         shell: bash
         run: |
-          output=$(git diff --name-only)
-          if [ "$output" != "" ]; then
-              >&2 echo "Some files have not been formatted !!!"
-              echo "$output"
-              exit 1
-          fi
-      - name: 'Suggest'
-        if: ${{ failure() && hashFiles('.JuliaFormatter.toml') != '' }}
-        uses: reviewdog/action-suggester@v1
-        with:
-          tool_name: JuliaFormatter
-          fail_on_error: true
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # TODO pin a rev/tag once JuliaFormat tags releases
+          julia --color=yes -e 'using Pkg; Pkg.Apps.add(url="https://github.com/julia-vscode/JuliaFormat.jl")'
+          echo "$HOME/.julia/bin" >> "$GITHUB_PATH"
+      - name: Check formatting
+        if: ${{ hashFiles('**/JuliaFormat.toml', '**/juliaformat.toml') != '' }}
+        shell: bash
+        run: juliaformat --check --diff .
 
   compute-test-matrix:
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}

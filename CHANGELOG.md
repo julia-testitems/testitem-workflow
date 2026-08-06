@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- The `format` job now runs the [JuliaFormat](https://github.com/julia-vscode/JuliaFormat.jl)
+  app in check-only mode (`juliaformat --check --diff .`): it fails when files
+  are not formatted and prints the diff in the job log, but never modifies the
+  repository. The previous reviewdog suggestion comments are gone. (The old job
+  also contained a syntax error that made its format step fail whenever it ran
+  at all.)
+- A repository opts in by having a `JuliaFormat.toml` anywhere in its tree
+  (previously: a `.JuliaFormatter.toml` at the repository root).
+  **`.JuliaFormatter.toml` is no longer honored** — formatting configuration
+  lives in `JuliaFormat.toml`, which the JuliaFormat app, the VS Code
+  extension and the language server all share.
+- The job now runs whenever lint and tests run — pushes, pull requests, and
+  manual `LintAndTest` dispatches — instead of only on pull requests, matching
+  standard practice (`cargo fmt --check` and `ruff format --check` run on
+  every CI event).
+- The job caches the Julia depot via `julia-actions/cache`.
+
 ## v2
 
 **Breaking.** Consumers must update their own `.github/workflows/juliaci.yml`, see Migration below.

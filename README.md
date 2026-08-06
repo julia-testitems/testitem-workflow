@@ -1,6 +1,6 @@
 # Test item reusable workflow
 
-This repository provides a reusable GitHub Workflow that lints, runs test items, deploys documentation and creates tags for Julia packages. It only works with packages that use the test item framework.
+This repository provides a reusable GitHub Workflow that lints, checks formatting, runs test items, deploys documentation and creates tags for Julia packages. It only works with packages that use the test item framework.
 
 ## Getting started
 
@@ -44,6 +44,28 @@ The `juliaci.yml` workflow accepts a number of configuration options that contro
 - `filter` (string, default `""`): A Julia expression used to filter which test items are run. The expression can reference the variables `name` (test item name), `tags` (vector of `Symbol` tags), `filename` (file path), and `package_name`. It should evaluate to `true` to include a test item and `false` to exclude it. The working directory is set to the repository root when the filter is evaluated. For example, `filter: '!(:slow in tags)'` would skip all test items tagged with `:slow`.
 - `github_job_prep_script`: Path to a Julia file that is run once on each GitHub worker before tests are executed.
 - `testitem-timeout` (number, default `1200`): Per test item timeout in seconds. If a single test item takes longer than this duration, it will be terminated and reported as errored. The default is 1200 seconds (20 minutes).
+
+## Formatting check
+
+The workflow includes a check-only formatting job powered by the
+[JuliaFormat](https://github.com/julia-vscode/JuliaFormat.jl) app. A repository
+opts in by having a `JuliaFormat.toml` configuration file anywhere in its tree —
+without one, the job does nothing. When enabled, the job runs
+`juliaformat --check --diff .` whenever lint and tests run (pushes, pull
+requests, and manual `LintAndTest` dispatches): it never modifies the
+repository, fails if any file is not formatted, and prints the diff in the job
+log.
+
+To fix a failure locally, install the app once and format:
+
+```
+julia> ]app add https://github.com/julia-vscode/JuliaFormat.jl
+
+$ juliaformat .
+```
+
+Note that JuliaFormatter.jl's `.JuliaFormatter.toml` is **not** honored — the
+formatting configuration lives in `JuliaFormat.toml`.
 
 ### Trigger-specific overrides
 
