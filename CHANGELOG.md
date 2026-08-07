@@ -20,6 +20,19 @@
   standard practice (`cargo fmt --check` and `ruff format --check` run on
   every CI event).
 - The job caches the Julia depot via `julia-actions/cache`.
+- The `run-tests` job now caches the Julia depot via `julia-actions/cache`.
+  Because the cache is saved in a post-job step, it captures everything the job
+  precompiled — the package's dependencies from `julia-buildpkg`, the test
+  runner's own tooling, and the precompilation done by the test worker
+  processes. Previously nothing in this job was cached, so every matrix leg
+  rebuilt the depot from scratch. (The `julia-run-testitems` and
+  `julia-report-ci-results` actions used to maintain private depots under
+  `runner.tool_cache` with their own `actions/cache` steps; that machinery has
+  been removed from the actions in favor of this single job-level cache.)
+- The `report-results` job now installs Julia explicitly via
+  `julia-actions/install-juliaup` (release channel) and caches the depot via
+  `julia-actions/cache`, instead of relying on whatever Julia the runner image
+  happens to provide.
 
 ## v2
 

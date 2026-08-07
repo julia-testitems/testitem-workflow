@@ -504,6 +504,7 @@ jobs:
     - uses: julia-actions/install-juliaup@v2
       with:
         channel:  ${{ matrix.juliaup-channel }}
+    - uses: julia-actions/cache@v2
     - uses: julia-actions/julia-buildpkg@v1
     - name: Run worker prep script
       if: ${{ needs.compute-test-matrix.outputs.github_job_prep_script != '' }}
@@ -543,6 +544,10 @@ jobs:
           pattern: testitemresults-*
           path: testresults
           merge-multiple: true
+      - uses: julia-actions/install-juliaup@v2
+        with:
+          channel: release
+      - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-report-ci-results@main
         with:
           results-path: testresults
