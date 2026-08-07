@@ -381,12 +381,20 @@ jobs:
   lint:
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
     runs-on: ubuntu-latest
-    outputs:
-      lint-results: ${{ steps.lint-step.outputs.lint-results }}
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/julia-lint@v1
         id: lint-step
+      - uses: actions/upload-artifact@v7
+        # The lint step fails the job on lint errors, but the SARIF is still
+        # needed by the report job.
+        if: ${{ !cancelled() }}
+        with:
+          name: lintresults
+          path: lint-results.sarif
+          retention-days: 1
+          # A tool failure (exit code 2) produces no SARIF file.
+          if-no-files-found: ignore
 
   # Check-only formatting gate (the canonical CI mode: fail with a diff, fix
   # locally). Runs whenever lint/tests run; a repo opts in by having a
@@ -544,17 +552,22 @@ jobs:
           pattern: testitemresults-*
           path: testresults
           merge-multiple: true
-      - uses: julia-actions/install-juliaup@v2
+      - uses: actions/download-artifact@v8
         with:
-          channel: release
-      - uses: julia-actions/cache@v2
+          # The pattern form tolerates a skipped lint job (a bare name errors
+          # when the artifact does not exist).
+          pattern: lintresults*
+          path: lintresults
+          merge-multiple: true
       - uses: julia-actions/julia-report-ci-results@main
         with:
           results-path: testresults
-          lint-results: ${{ needs.lint.outputs.lint-results }}
+          lint-results-path: lintresults
       - uses: geekyeggo/delete-artifact@v6
         with:
-          name: testitemresults-*
+          name: |
+            testitemresults-*
+            lintresults
 
   deploy-docs:
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'DocDeploy') }}
