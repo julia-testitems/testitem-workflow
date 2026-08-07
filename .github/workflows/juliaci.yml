@@ -383,7 +383,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: julia-actions/julia-lint@v1
+      - uses: julia-actions/julia-lint@v2
         id: lint-step
       - uses: actions/upload-artifact@v7
         # The lint step fails the job on lint errors, but the SARIF is still
@@ -468,7 +468,7 @@ jobs:
           echo "github_job_prep_script=$(resolve github_job_prep_script)" >> "$GITHUB_OUTPUT"
           echo "testitem-timeout=$(resolve testitem-timeout)" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v6
-      - uses: julia-actions/julia-compute-test-matrix@v1
+      - uses: julia-actions/julia-compute-test-matrix@v2
         id: compute-test-matrix
         with:
           include-release-versions: ${{ steps.resolve.outputs.include-release-versions }}
@@ -506,7 +506,7 @@ jobs:
       run: julia ${{ needs.compute-test-matrix.outputs.github_job_prep_script }}
       shell: bash
     - name: Run tests
-      uses: julia-actions/julia-run-testitems@main
+      uses: julia-actions/julia-run-testitems@v2
       with:
         juliaup-channel: ${{ matrix.juliaup-channel }}
         profile-name: ${{ format('Julia {0}:{1}', matrix.juliaup-channel, matrix.os) }}
@@ -546,7 +546,7 @@ jobs:
           pattern: lintresults*
           path: lintresults
           merge-multiple: true
-      - uses: julia-actions/julia-report-ci-results@main
+      - uses: julia-actions/julia-report-ci-results@v2
         with:
           results-path: testresults
           lint-results-path: lintresults
