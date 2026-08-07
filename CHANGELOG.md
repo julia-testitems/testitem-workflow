@@ -19,7 +19,10 @@
   manual `LintAndTest` dispatches — instead of only on pull requests, matching
   standard practice (`cargo fmt --check` and `ruff format --check` run on
   every CI event).
-- The job caches the Julia depot via `julia-actions/cache`.
+- The job now uses the [julia-vscode/julia-format](https://github.com/julia-vscode/julia-format)
+  action (which installs Julia and caches the depot itself) with
+  `require-config: true`, so the `JuliaFormat.toml` opt-in gate lives in the
+  action rather than in an `if:` condition here.
 - The `run-tests` job now caches the Julia depot via `julia-actions/cache`.
   Because the cache is saved in a post-job step, it captures everything the job
   precompiled — the package's dependencies from `julia-buildpkg`, the test
@@ -29,10 +32,17 @@
   `julia-report-ci-results` actions used to maintain private depots under
   `runner.tool_cache` with their own `actions/cache` steps; that machinery has
   been removed from the actions in favor of this single job-level cache.)
-- The `report-results` job now installs Julia explicitly via
-  `julia-actions/install-juliaup` (release channel) and caches the depot via
-  `julia-actions/cache`, instead of relying on whatever Julia the runner image
-  happens to provide.
+- The `report-results` job no longer needs a Julia installation at all:
+  `julia-report-ci-results` is now a pure `node20` action that needs no
+  checkout, cache, token, or GitHub API access.
+- The `run-tests` job now surfaces failed test items as inline GitHub error
+  annotations (via `julia-run-testitems`), in addition to the aggregated
+  report.
+- `include-alpha-versions` and `include-nightly-versions` now actually produce
+  matrix entries: alpha was previously a declared no-op in
+  `julia-compute-test-matrix`, and nightly never matched the juliaup version
+  database (which does not list nightly channels). Matrix entries now also
+  carry an `experimental: true/false` field for pre-release legs.
 
 ## v2
 
