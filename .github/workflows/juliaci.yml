@@ -550,6 +550,7 @@ jobs:
         with:
           results-path: testresults
           lint-results-path: lintresults
+          process-logs-retention-days: 14
       - uses: geekyeggo/delete-artifact@v6
         with:
           name: |
