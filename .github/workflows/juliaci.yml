@@ -402,12 +402,12 @@ jobs:
           channel: release
       - uses: julia-actions/cache@v2
         if: ${{ hashFiles('**/JuliaFormat.toml', '**/juliaformat.toml') != '' }}
-      - name: Install the JuliaFormat app
+      - name: Install the JuliaFormatApp app
         if: ${{ hashFiles('**/JuliaFormat.toml', '**/juliaformat.toml') != '' }}
         shell: bash
         run: |
-          # TODO pin a rev/tag once JuliaFormat tags releases
-          julia --color=yes -e 'using Pkg; Pkg.Apps.add(url="https://github.com/julia-vscode/JuliaFormat.jl")'
+          # TODO pin a rev/tag once JuliaFormatApp tags releases
+          julia --color=yes -e 'using Pkg; Pkg.Apps.add(url="https://github.com/julia-vscode/JuliaFormatApp.jl")'
           echo "$HOME/.julia/bin" >> "$GITHUB_PATH"
       - name: Check formatting
         if: ${{ hashFiles('**/JuliaFormat.toml', '**/juliaformat.toml') != '' }}
