@@ -556,6 +556,9 @@ jobs:
           name: |
             testitemresults-*
             lintresults
+          # Duplicate artifact names (e.g. from a retried matrix job) make the
+          # by-name delete 404 on the second copy; cleanup must not fail the run.
+          failOnError: false
 
   deploy-docs:
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'DocDeploy') }}
