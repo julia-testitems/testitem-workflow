@@ -48,7 +48,7 @@ The `juliaci.yml` workflow accepts a number of configuration options that contro
 ## Formatting check
 
 The workflow includes a check-only formatting job powered by the
-[JuliaFormatApp](https://github.com/julia-vscode/JuliaFormatApp.jl) app. A repository
+[FormatApp](https://github.com/julia-vscode/FormatApp.jl) app. A repository
 opts in by having a `JuliaFormat.toml` configuration file anywhere in its tree —
 without one, the job does nothing. When enabled, the job runs
 `juliaformat --check --diff .` whenever lint and tests run (pushes, pull
@@ -59,7 +59,7 @@ log.
 To fix a failure locally, install the app once and format:
 
 ```
-julia> ]app add https://github.com/julia-vscode/JuliaFormatApp.jl
+julia> ]app add https://github.com/julia-vscode/FormatApp.jl
 
 $ juliaformat .
 ```
