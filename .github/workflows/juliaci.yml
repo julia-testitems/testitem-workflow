@@ -382,7 +382,7 @@ jobs:
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: julia-actions/julia-lint@v2
         id: lint-step
       - uses: actions/upload-artifact@v7
@@ -403,7 +403,7 @@ jobs:
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: julia-vscode/julia-format@v1
         with:
           # Opt-in gate: without a JuliaFormat.toml the action no-ops.
@@ -467,7 +467,7 @@ jobs:
           echo "filter=$(resolve filter)" >> "$GITHUB_OUTPUT"
           echo "github_job_prep_script=$(resolve github_job_prep_script)" >> "$GITHUB_OUTPUT"
           echo "testitem-timeout=$(resolve testitem-timeout)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: julia-actions/julia-compute-test-matrix@v2
         id: compute-test-matrix
         with:
@@ -495,7 +495,7 @@ jobs:
           include: ${{ fromJson(needs.compute-test-matrix.outputs.test-matrix) }}
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: julia-actions/install-juliaup@v3
       with:
         channel:  ${{ matrix.juliaup-channel }}
@@ -564,7 +564,7 @@ jobs:
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'DocDeploy') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Check file existence
         id: check_files
         uses: andstor/file-existence-action@v3
