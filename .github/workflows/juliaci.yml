@@ -75,6 +75,38 @@ on:
         type: number
         required: false
         default: 1200
+      # Execution settings forwarded to julia-run-testitems. Deliberately not given the
+      # per-trigger override treatment below: those exist for varying how much gets tested
+      # on a draft PR versus main, whereas these describe how the test processes behave and
+      # do not sensibly differ by trigger.
+      junit-path:
+        type: string
+        required: false
+        default: ""
+      coverage-lcov-path:
+        type: string
+        required: false
+        default: ""
+      output-mode:
+        type: string
+        required: false
+        default: ""
+      threads:
+        type: string
+        required: false
+        default: ""
+      gc-between-testitems:
+        type: string
+        required: false
+        default: ""
+      memory-threshold:
+        type: string
+        required: false
+        default: ""
+      schedule:
+        type: string
+        required: false
+        default: ""
       # Overrides for draft PR runs
       draft-pr-include-release-versions:
         type: string
@@ -514,6 +546,13 @@ jobs:
         env: ${{ needs.compute-test-matrix.outputs.env }}
         filter: ${{ needs.compute-test-matrix.outputs.filter }}
         testitem-timeout: ${{ needs.compute-test-matrix.outputs.testitem-timeout }}
+        junit-path: ${{ inputs.junit-path }}
+        coverage-lcov-path: ${{ inputs.coverage-lcov-path }}
+        output-mode: ${{ inputs.output-mode }}
+        threads: ${{ inputs.threads }}
+        gc-between-testitems: ${{ inputs.gc-between-testitems }}
+        memory-threshold: ${{ inputs.memory-threshold }}
+        schedule: ${{ inputs.schedule }}
     - uses: actions/upload-artifact@v7
       if: ${{ !cancelled() }}
       with:
