@@ -91,6 +91,10 @@ on:
         type: string
         required: false
         default: ""
+      max-workers:
+        type: string
+        required: false
+        default: ""
       threads:
         type: string
         required: false
@@ -549,6 +553,7 @@ jobs:
         junit-path: ${{ inputs.junit-path }}
         coverage-lcov-path: ${{ inputs.coverage-lcov-path }}
         output-mode: ${{ inputs.output-mode }}
+        max-workers: ${{ inputs.max-workers }}
         threads: ${{ inputs.threads }}
         gc-between-testitems: ${{ inputs.gc-between-testitems }}
         memory-threshold: ${{ inputs.memory-threshold }}
