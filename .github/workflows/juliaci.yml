@@ -22,7 +22,7 @@ on:
       include-rc-versions:
         type: boolean
         required: false
-        default: false
+        default: true
       include-beta-versions:
         type: boolean
         required: false
@@ -59,6 +59,12 @@ on:
         type: boolean
         required: false
         default: true
+      allow-failure:
+        type: string
+        required: false
+        # Globs matched against "<juliaup-channel>:<os>"; see julia-compute-test-matrix.
+        # Legs that match may fail without failing the run. "none" makes every leg blocking.
+        default: "rc,beta,alpha,nightly"
       env:
         type: string
         required: false
@@ -168,6 +174,10 @@ on:
         type: string
         required: false
         default: ""
+      draft-pr-allow-failure:
+        type: string
+        required: false
+        default: ""
       draft-pr-env:
         type: string
         required: false
@@ -238,6 +248,10 @@ on:
         required: false
         default: ""
       pr-include-macos-aarch64:
+        type: string
+        required: false
+        default: ""
+      pr-allow-failure:
         type: string
         required: false
         default: ""
@@ -314,6 +328,10 @@ on:
         type: string
         required: false
         default: ""
+      main-allow-failure:
+        type: string
+        required: false
+        default: ""
       main-env:
         type: string
         required: false
@@ -384,6 +402,10 @@ on:
         required: false
         default: ""
       manual-trigger-include-macos-aarch64:
+        type: string
+        required: false
+        default: ""
+      manual-trigger-allow-failure:
         type: string
         required: false
         default: ""
@@ -499,6 +521,7 @@ jobs:
           echo "include-linux-x86=$(resolve include-linux-x86)" >> "$GITHUB_OUTPUT"
           echo "include-macos-x64=$(resolve include-macos-x64)" >> "$GITHUB_OUTPUT"
           echo "include-macos-aarch64=$(resolve include-macos-aarch64)" >> "$GITHUB_OUTPUT"
+          echo "allow-failure=$(resolve allow-failure)" >> "$GITHUB_OUTPUT"
           echo "env=$(resolve env)" >> "$GITHUB_OUTPUT"
           echo "filter=$(resolve filter)" >> "$GITHUB_OUTPUT"
           echo "github_job_prep_script=$(resolve github_job_prep_script)" >> "$GITHUB_OUTPUT"
@@ -521,6 +544,7 @@ jobs:
           include-linux-x86: ${{ steps.resolve.outputs.include-linux-x86 }}
           include-macos-x64: ${{ steps.resolve.outputs.include-macos-x64 }}
           include-macos-aarch64: ${{ steps.resolve.outputs.include-macos-aarch64 }}
+          allow-failure: ${{ steps.resolve.outputs.allow-failure }}
 
   run-tests:
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
@@ -530,6 +554,9 @@ jobs:
         matrix:
           include: ${{ fromJson(needs.compute-test-matrix.outputs.test-matrix) }}
     runs-on: ${{ matrix.os }}
+    # Legs the matrix marked as allowed to fail report their results but do not fail
+    # the run; report-results tells the two apart by which artifact they land in.
+    continue-on-error: ${{ matrix.allow-failure }}
     steps:
     - uses: actions/checkout@v7
     - uses: julia-actions/install-juliaup@v3
@@ -586,7 +613,7 @@ jobs:
     - uses: actions/upload-artifact@v7
       if: ${{ !cancelled() }}
       with:
-        name: ${{ format('testitemresults-{0}-{1}', matrix.os, matrix.juliaup-channel) }}
+        name: ${{ format('testitemresults-{0}-{1}-{2}', matrix.allow-failure && 'allowfail' || 'blocking', matrix.os, matrix.juliaup-channel) }}
         path: ${{ format('testitemresults-{0}-{1}.json', matrix.os, matrix.juliaup-channel) }}
         retention-days: 1
     - uses: julia-actions/julia-processcoverage@v1
@@ -605,8 +632,14 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          pattern: testitemresults-*
+          pattern: testitemresults-blocking-*
           path: testresults
+          merge-multiple: true
+      - uses: actions/download-artifact@v8
+        with:
+          # Failures here are reported but must not fail the run.
+          pattern: testitemresults-allowfail-*
+          path: allowfailresults
           merge-multiple: true
       - uses: actions/download-artifact@v8
         with:
@@ -618,6 +651,7 @@ jobs:
       - uses: julia-actions/julia-report-ci-results@v2
         with:
           results-path: testresults
+          allowed-failure-results-path: allowfailresults
           lint-results-path: lintresults
           process-logs-retention-days: 14
       - uses: geekyeggo/delete-artifact@v6

@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Added
+
+- New `allow-failure` option: which matrix legs may fail without failing the run.
+  Comma- or newline-separated globs, each matched against a leg's
+  `<juliaup-channel>:<os>` identity; parts a pattern leaves out are filled in with
+  wildcards, so `rc` covers every arch and runner and `*~x86` covers every 32-bit
+  leg. Pass `none` to make every leg blocking. Like the other matrix options it has
+  `draft-pr-`, `pr-`, `main-` and `manual-trigger-` overrides.
+
+### Changed
+
+- `include-rc-versions` now defaults to `true`, so a Julia release candidate that
+  breaks a package surfaces before the release. RC legs are covered by the default
+  `allow-failure` set, so their failures are reported with a warning in the CI
+  report and do not fail the run. The leg itself still shows as failed in the
+  GitHub checks list, which is how `continue-on-error` renders.
+- Test results are now uploaded as `testitemresults-blocking-*` or
+  `testitemresults-allowfail-*` artifacts, and `report-results` downloads the two
+  into separate directories. The split is by artifact rather than by profile name
+  because test definition errors carry no profile, and a leg that dies before
+  writing results has none at all.
+
 ### Fixed
 
 - The `run-tests` job now makes sure the General registry is present and usable
