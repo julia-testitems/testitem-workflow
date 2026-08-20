@@ -536,6 +536,21 @@ jobs:
       with:
         channel:  ${{ matrix.juliaup-channel }}
     - uses: julia-actions/cache@v3
+    # `julia-buildpkg` only installs a registry from Julia 1.5 on, and Julia
+    # before that does not clone one on demand either. A job whose depot cache
+    # missed therefore has no registry at all, and every dependency resolves to
+    # "has no known versions". Cloning General ourselves is what old Pkg would
+    # have done, and a warm cache already carries one, so this is a no-op there.
+    - name: Install the General registry on Julia < 1.5
+      shell: bash
+      run: |
+        julia -e '
+          VERSION < v"1.5" || exit()
+          general = joinpath(DEPOT_PATH[1], "registries", "General")
+          isfile(joinpath(general, "Registry.toml")) && exit()
+          mkpath(dirname(general))
+          run(`git clone --quiet --depth=1 https://github.com/JuliaRegistries/General.git $general`)
+        '
     - uses: julia-actions/julia-buildpkg@v1
     - name: Run worker prep script
       if: ${{ needs.compute-test-matrix.outputs.github_job_prep_script != '' }}

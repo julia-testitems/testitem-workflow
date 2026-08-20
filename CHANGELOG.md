@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Fixed
+
+- The `run-tests` job now clones the General registry itself before
+  `julia-buildpkg` when the matrix leg runs Julia older than 1.5.
+  `julia-buildpkg` installs a registry only from 1.5 on, and Pkg before that
+  does not clone one on demand, so a leg whose depot cache missed had no
+  registry at all and every dependency resolved to "has no known versions".
+  Legs that restored a warm cache happened to pass, which made the failure look
+  intermittent. A warm cache is unaffected: the step exits when a registry is
+  already there.
+
 ### Changed
 
 - The `format` job now runs the [FormatApp](https://github.com/julia-vscode/FormatApp.jl)
