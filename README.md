@@ -46,14 +46,17 @@ The `juliaci.yml` workflow accepts a number of configuration options that contro
 - `github_job_prep_script`: Path to a Julia file that is run once on each GitHub worker before tests are executed.
 - `testitem-timeout` (number, default `1200`): Per test item timeout in seconds. If a single test item takes longer than this duration, it will be terminated and reported as errored. The default is 1200 seconds (20 minutes).
 - `junit-path` (string, default `""`): Path to write the test results as JUnit XML. Most CI test reporters consume this format; the results JSON is richer but far less portable.
-- `coverage-lcov-path` (string, default `""`): Path to write the run's merged coverage in LCOV format, for Codecov, Coveralls and similar. Implies coverage.
+- `coverage` (`true` or `false`, default `true`): Collect line coverage and upload it to Codecov. Coverage is collected on every matrix leg that can do it — the instrumentation requires Julia 1.11 or newer, so older legs are skipped with a notice in the job log rather than uploading an empty report. Set this to `false` to switch coverage off entirely, in which case no `codecov_token` is needed.
+- `coverage-lcov-path` (string, default `""`): Where to write the run's merged coverage in LCOV format. Empty means `lcov.info` in the workspace root, which is what gets uploaded to Codecov. Setting it explicitly also switches coverage on, even with `coverage: false`.
 - `output-mode` (string, default `""`): Which captured test item output to echo into the job log — `issues` (only failing items), `all`, or `none`. Captured output is always present in the results JSON regardless. Empty leaves the `juliati` default.
 - `threads` (string, default `""`): Value for the test processes' `--threads`, for example `4`, `auto`, or `2,1`. Empty leaves Julia's default.
 - `gc-between-testitems` (string, default `""`): `true` or `false` to force a full garbage collection between test items. Empty leaves the default, which is on whenever more than one test process is used.
 - `memory-threshold` (string, default `""`): Recycle a test process once system memory use exceeds this fraction, between 0 and 1. Off by default. Experimental.
 - `schedule` (string, default `""`): How test items are distributed over test processes — `duration` orders by measured duration, past failures and warm setups; `contiguous` restores the older chunk-by-position behaviour. Set this to `contiguous` to rule the scheduler out when diagnosing a run.
 
-These seven describe how the test processes behave rather than how much gets tested, so unlike `filter` and `testitem-timeout` they have no per-trigger (`pr-`, `main-`, …) overrides.
+These describe how the test processes behave rather than how much gets tested, so unlike `filter` and `testitem-timeout` they have no per-trigger (`pr-`, `main-`, …) overrides.
+
+The `codecov_token` secret is only used when coverage is collected; a repository that sets `coverage: false` can leave it out.
 
 ## Formatting check
 

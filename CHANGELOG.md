@@ -26,6 +26,18 @@
 
 ### Fixed
 
+- **Codecov no longer reports 0% for every repository.** The workflow never actually
+  asked for coverage: it forwarded the `coverage-lcov-path` input, whose default is
+  empty, so `juliati` ran with `--code-coverage=none`. It then ran
+  `julia-actions/julia-processcoverage`, which collects the `.cov` files
+  `Pkg.test(coverage=true)` leaves behind — of which a test item run produces none. That
+  action therefore found no coverage for any source file, assumed each had none, and
+  wrote an `lcov.info` in which every line had zero hits. Codecov faithfully reported
+  that as 0%, which is worse than reporting nothing: it looked like a real measurement,
+  so nothing failed and nothing looked broken. `julia-processcoverage` is gone, the run
+  now writes its own merged LCOV, and the upload is skipped entirely when no coverage
+  file exists.
+
 - The `run-tests` job now makes sure the General registry is present and usable
   before `julia-buildpkg` when the matrix leg runs Julia older than 1.5.
   `julia-buildpkg` installs a registry only from 1.5 on, and Pkg before that
@@ -37,8 +49,19 @@
   `Registry.toml` that old Pkg reads rather than for the folder alone, replaces
   anything else sitting in its place, and leaves a complete registry untouched.
 
+### Added
+
+- A `coverage` input (default `true`) that turns coverage collection on or off. Coverage
+  is collected on every matrix leg capable of it; the instrumentation needs Julia 1.11 or
+  newer, so an older leg is skipped with a `::notice` in the job log instead of uploading
+  an empty report. `coverage-lcov-path` now only chooses *where* the file goes (default
+  `lcov.info`), and setting it still switches coverage on by itself.
+
 ### Changed
 
+- The `codecov_token` secret is no longer `required`. It is only used when coverage is
+  collected, so a repository that sets `coverage: false` need not supply one. Callers
+  that already pass it are unaffected.
 - The `format` job now runs the [FormatApp](https://github.com/julia-vscode/FormatApp.jl)
   app in check-only mode (`juliaformat --check --diff .`): it fails when files
   are not formatted and prints the diff in the job log, but never modifies the
