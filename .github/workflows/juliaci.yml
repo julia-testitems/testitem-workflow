@@ -83,6 +83,10 @@ on:
         type: string
         required: false
         default: ""
+      coverage:
+        type: boolean
+        required: false
+        default: true
       coverage-lcov-path:
         type: string
         required: false
@@ -404,8 +408,10 @@ on:
         required: false
         default: ""
     secrets:
+      # Only needed when coverage is collected, which is why this is not required: a
+      # repository that sets `coverage: false` should not have to invent a token.
       codecov_token:
-        required: true
+        required: false
 
 permissions: write-all
 
@@ -566,6 +572,43 @@ jobs:
       if: ${{ needs.compute-test-matrix.outputs.github_job_prep_script != '' }}
       run: julia ${{ needs.compute-test-matrix.outputs.github_job_prep_script }}
       shell: bash
+    # Coverage has to be decided per leg, because the instrumentation `juliati` relies on
+    # needs Julia 1.11 or newer — an older leg collects nothing whatever it is asked to do.
+    - name: Decide coverage for this leg
+      id: cov
+      shell: bash
+      env:
+        COVERAGE: ${{ inputs.coverage }}
+        LCOV_PATH: ${{ inputs.coverage-lcov-path }}
+        CHANNEL: ${{ matrix.juliaup-channel }}
+      run: |
+        # Setting `coverage-lcov-path` is an opt-in of its own, for a repository that wants
+        # the file at a particular place (or wants it while `coverage` is off).
+        want=false
+        if [[ "$COVERAGE" == "true" || -n "$LCOV_PATH" ]]; then
+          want=true
+        fi
+
+        # `juliaup-channel` is "<version>~<arch>" for a stable leg and "<channel>~<arch>"
+        # (rc/beta/alpha/nightly) otherwise. Every named pre-release channel is newer than
+        # 1.11, so only the numeric form needs comparing.
+        eligible=true
+        version="${CHANNEL%%~*}"
+        if [[ "$version" =~ ^([0-9]+)\.([0-9]+) ]]; then
+          major="${BASH_REMATCH[1]}"
+          minor="${BASH_REMATCH[2]}"
+          if (( major < 1 || (major == 1 && minor < 11) )); then
+            eligible=false
+          fi
+        fi
+
+        path=""
+        if [[ "$want" == "true" && "$eligible" == "true" ]]; then
+          path="${LCOV_PATH:-lcov.info}"
+        elif [[ "$want" == "true" ]]; then
+          echo "::notice::Coverage skipped on Julia $version: test item coverage requires Julia 1.11 or newer."
+        fi
+        echo "lcov-path=$path" >> "$GITHUB_OUTPUT"
     - name: Run tests
       uses: julia-actions/julia-run-testitems@v2
       with:
@@ -576,7 +619,7 @@ jobs:
         filter: ${{ needs.compute-test-matrix.outputs.filter }}
         testitem-timeout: ${{ needs.compute-test-matrix.outputs.testitem-timeout }}
         junit-path: ${{ inputs.junit-path }}
-        coverage-lcov-path: ${{ inputs.coverage-lcov-path }}
+        coverage-lcov-path: ${{ steps.cov.outputs.lcov-path }}
         output-mode: ${{ inputs.output-mode }}
         max-workers: ${{ inputs.max-workers }}
         threads: ${{ inputs.threads }}
@@ -589,12 +632,20 @@ jobs:
         name: ${{ format('testitemresults-{0}-{1}', matrix.os, matrix.juliaup-channel) }}
         path: ${{ format('testitemresults-{0}-{1}.json', matrix.os, matrix.juliaup-channel) }}
         retention-days: 1
-    - uses: julia-actions/julia-processcoverage@v1
-      if: ${{ !cancelled() }}
+    # No `julia-processcoverage` here: that action collects the `.cov` files
+    # `Pkg.test(coverage=true)` leaves behind, and `juliati` has none — it merges coverage
+    # in-process and writes the LCOV itself. Running it anyway found no `.cov` file for any
+    # source file, assumed "no coverage", and wrote an lcov.info in which every line had
+    # zero hits, which Codecov faithfully reported as 0%.
     - uses: codecov/codecov-action@v7
-      if: ${{ !cancelled() }}
+      # An absent file means no coverage was collected — the leg was skipped, or the run
+      # died before writing it. Uploading nothing at all beats uploading a false zero.
+      if: ${{ !cancelled() && steps.cov.outputs.lcov-path != '' && hashFiles(steps.cov.outputs.lcov-path) != '' }}
       with:
-        files: ./lcov.info
+        files: ${{ steps.cov.outputs.lcov-path }}
+        # Without this the uploader goes looking for other coverage files on its own.
+        disable_search: true
+        fail_ci_if_error: false
         flags: unittests
         token: ${{ secrets.codecov_token }}
 
