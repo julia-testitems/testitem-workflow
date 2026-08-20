@@ -4,6 +4,11 @@
 
 ### Added
 
+- New `test-log-level` option: the minimum log level for the code under test — your
+  package and the test item bodies — as `debug`, `info`, `warn` or `error`. This is a
+  separate axis from GitHub's "Enable debug logging" checkbox, which continues to
+  control only the test infrastructure's own diagnostics. Unlike setting `JULIA_DEBUG`
+  by hand it needs no module name and works on every platform.
 - New `allow-failure` option: which matrix legs may fail without failing the run.
   Comma- or newline-separated globs, each matched against a leg's
   `<juliaup-channel>:<os>` identity; parts a pattern leaves out are filled in with

@@ -52,11 +52,36 @@ The `juliaci.yml` workflow accepts a number of configuration options that contro
 - `threads` (string, default `""`): Value for the test processes' `--threads`, for example `4`, `auto`, or `2,1`. Empty leaves Julia's default.
 - `gc-between-testitems` (string, default `""`): `true` or `false` to force a full garbage collection between test items. Empty leaves the default, which is on whenever more than one test process is used.
 - `memory-threshold` (string, default `""`): Recycle a test process once system memory use exceeds this fraction, between 0 and 1. Off by default. Experimental.
+- `test-log-level` (string, default `""`): Minimum log level for the code under test — your package and the test item bodies: `debug`, `info`, `warn` or `error`. Empty leaves the `juliati` default (`info`). See [Debug logging](#debug-logging).
 - `schedule` (string, default `""`): How test items are distributed over test processes — `duration` orders by measured duration, past failures and warm setups; `contiguous` restores the older chunk-by-position behaviour. Set this to `contiguous` to rule the scheduler out when diagnosing a run.
 
 These describe how the test processes behave rather than how much gets tested, so unlike `filter` and `testitem-timeout` they have no per-trigger (`pr-`, `main-`, …) overrides.
 
 The `codecov_token` secret is only used when coverage is collected; a repository that sets `coverage: false` can leave it out.
+
+## Debug logging
+
+Two different things get called "debug logging" for a test run, and the workflow keeps them apart:
+
+| I want to see… | Use | What it does |
+| --- | --- | --- |
+| my package's own `@debug` output | `test-log-level: debug` | Raises the log level applied around each test item, so `@debug` from your package and from your test item bodies reaches the job log. Needs no module name and works on every platform. |
+| why the test run itself misbehaved | GitHub's **Enable debug logging** checkbox | Diagnostics from the test infrastructure — process launches, scheduling, timeouts. |
+
+```yml
+jobs:
+  julia-ci:
+    uses: julia-testitems/testitem-workflow/.github/workflows/juliaci.yml@v2
+    with:
+      test-log-level: debug
+    permissions: write-all
+    secrets:
+      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+```
+
+The checkbox deliberately does **not** raise the level of the code under test: `ACTIONS_STEP_DEBUG` is documented as being about diagnostics from the tooling, and a debug-level run of a large suite would bury the very infrastructure diagnostics the checkbox was ticked to reveal.
+
+To scope debug output to particular modules instead of raising the level for everything, `JULIA_DEBUG` still works via the `env` input: `env: '{"JULIA_DEBUG": "MyPkg"}'`.
 
 ## Formatting check
 
