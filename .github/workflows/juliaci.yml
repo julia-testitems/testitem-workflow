@@ -121,6 +121,10 @@ on:
         type: string
         required: false
         default: ""
+      test-log-level:
+        type: string
+        required: false
+        default: ""
       # Overrides for draft PR runs
       draft-pr-include-release-versions:
         type: string
@@ -653,6 +657,7 @@ jobs:
         gc-between-testitems: ${{ inputs.gc-between-testitems }}
         memory-threshold: ${{ inputs.memory-threshold }}
         schedule: ${{ inputs.schedule }}
+        test-log-level: ${{ inputs.test-log-level }}
     - uses: actions/upload-artifact@v7
       if: ${{ !cancelled() }}
       with:
