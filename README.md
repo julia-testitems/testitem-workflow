@@ -30,7 +30,7 @@ The `juliaci.yml` workflow accepts a number of configuration options that contro
 - `include-lts-versions` (`true` or `false`, default `true`): run tests on the latest long-term support Julia version.
 - `include-all-compatible-minor-versions` (`true` or `false`, default `false`): run tests on all Julia minor versions that are compatible with the `[compat]` section in the package's `Project.toml`.
 - `include-smallest-compatible-minor-versions` (`true` or `false`, default `true`): run tests on the smallest Julia minor versions that is compatible with the `[compat]` section in the package's `Project.toml`.
-- `include-rc-versions` (`true` or `false`, default `false`): run tests on the latest release candidate Julia version.
+- `include-rc-versions` (`true` or `false`, default `true`): run tests on the latest release candidate Julia version. Release candidates are allowed to fail by default, so a broken RC shows up in the report without failing CI — see `allow-failure` below.
 - `include-beta-versions` (`true` or `false`, default `false`): run tests on the latest beta Julia version.
 - `include-alpha-versions` (`true` or `false`, default `false`): run tests on the latest alpha Julia version.
 - `include-nightly-versions` (`true` or `false`, default `false`): run tests on the latest nightly Julia version.
@@ -40,6 +40,7 @@ The `juliaci.yml` workflow accepts a number of configuration options that contro
 - `include-linux-x86` (`true` or `false`, default `true`): run tests on Linux x86.
 - `include-macos-x64` (`true` or `false`, default `true`): run tests on MacOS x64.
 - `include-macos-aarch64` (`true` or `false`, default `true`): run tests on MacOS aarch64.
+- `allow-failure` (string, default `"rc,beta,alpha,nightly"`): which matrix legs may fail without failing the run. Comma- or newline-separated globs, each matched against the leg's `<juliaup-channel>:<os>` identity (e.g. `rc~x64:ubuntu-latest`); parts a pattern leaves out are filled in with wildcards, so `rc` covers every arch and runner and `*~x86` covers every 32-bit leg. Failures on these legs are reported with a ⚠️ in the CI report but do not fail the run — note that the leg itself is still shown as failed in the GitHub checks list. Pass `none` to make every leg blocking.
 - `env` (JSON string): By passing a JSON string one can set environment variables for the Julia process that executes test items. For example `env: '{"FOO": "BAR"}'` would set an environment variable named `FOO` to the value `BAR`.
 - `filter` (string, default `""`): A Julia expression used to filter which test items are run. The expression can reference the variables `name` (test item name), `tags` (vector of `Symbol` tags), `filename` (file path), and `package_name`. It should evaluate to `true` to include a test item and `false` to exclude it. The working directory is set to the repository root when the filter is evaluated. For example, `filter: '!(:slow in tags)'` would skip all test items tagged with `:slow`.
 - `github_job_prep_script`: Path to a Julia file that is run once on each GitHub worker before tests are executed.
@@ -113,7 +114,7 @@ jobs:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
 ```
 
-In the following example tests are run on release candidate versions if they are available:
+Release candidates are in the matrix by default and are allowed to fail. In the following example they are made blocking instead, so a failure on an RC fails CI:
 
 ```yml
 name: Julia CI
@@ -128,7 +129,7 @@ jobs:
   julia-ci:
     uses: julia-testitems/testitem-workflow/.github/workflows/juliaci.yml@v2
     with:
-      include-rc-versions: true
+      allow-failure: none
     permissions: write-all
     secrets:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
