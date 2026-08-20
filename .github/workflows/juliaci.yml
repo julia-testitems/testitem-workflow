@@ -536,11 +536,13 @@ jobs:
       with:
         channel:  ${{ matrix.juliaup-channel }}
     - uses: julia-actions/cache@v3
-    # `julia-buildpkg` only installs a registry from Julia 1.5 on, and Julia
-    # before that does not clone one on demand either. A job whose depot cache
-    # missed therefore has no registry at all, and every dependency resolves to
-    # "has no known versions". Cloning General ourselves is what old Pkg would
-    # have done, and a warm cache already carries one, so this is a no-op there.
+    # `julia-buildpkg` only installs a registry from Julia 1.5 on, and Pkg before
+    # that does not clone one on demand under `Pkg.build` either. A leg without a
+    # usable registry resolves every dependency to "has no known versions", and
+    # because the depot is cached afterwards, a registry left half-written stays
+    # broken for every later run of that leg. So the registry is checked for the
+    # `Registry.toml` old Pkg reads, not merely for the folder, and anything else
+    # sitting in its place is replaced. A complete registry is left alone.
     - name: Install the General registry on Julia < 1.5
       shell: bash
       run: |
@@ -548,6 +550,14 @@ jobs:
           VERSION < v"1.5" || exit()
           general = joinpath(DEPOT_PATH[1], "registries", "General")
           isfile(joinpath(general, "Registry.toml")) && exit()
+          if ispath(general)
+            println("Registry at $general is unusable, replacing it")
+            # git marks its object files read-only, which blocks the delete on Windows
+            for (root, dirs, files) in walkdir(general), f in files
+              try chmod(joinpath(root, f), 0o777) catch end
+            end
+            rm(general, recursive=true)
+          end
           mkpath(dirname(general))
           run(`git clone --quiet --depth=1 https://github.com/JuliaRegistries/General.git $general`)
         '
