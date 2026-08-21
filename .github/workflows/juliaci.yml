@@ -78,9 +78,9 @@ on:
         required: false
         default: ""
       testitem-timeout:
-        type: number
+        type: string
         required: false
-        default: 1200
+        default: ""
       # Execution settings forwarded to julia-run-testitems. Deliberately not given the
       # per-trigger override treatment below: those exist for varying how much gets tested
       # on a draft PR versus main, whereas these describe how the test processes behave and
