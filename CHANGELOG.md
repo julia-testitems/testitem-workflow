@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+### Fixed
+
+- **GitHub's "Re-run failed jobs" now works.** A partial re-run keeps the same run id
+  and re-runs only the failed jobs, and — unlike a full re-run — GitHub keeps the
+  previous attempt's artifacts. Two things broke on that:
+
+  The `report-results` job ended with an artifact cleanup step that had no `if:`, so it
+  was skipped whenever the report action failed the job — which is every run with a test
+  failure, i.e. exactly the runs worth re-running. The first attempt's artifacts
+  therefore survived, and because artifact names are unique per run rather than per
+  attempt, the re-run leg's upload collided with its own earlier copy and the leg went
+  red at the upload step no matter what the tests did. Both uploads now set
+  `overwrite: true`, so a re-run leg replaces its own result while legs that are not
+  re-run keep theirs. That also removes an ambiguity in the report job's
+  `merge-multiple` downloads, which could otherwise unzip a stale copy over a fresh one.
+
+  When the report job *did* pass in the first attempt — an `allow-failure` leg going
+  red, or a lint-only failure — cleanup ran and deleted every result. The re-run then
+  reported on only the legs it had re-run, rendering a green, complete-looking summary
+  over a partial matrix. The cleanup step is gone, and `retention-days` on the two
+  uploads goes from 1 to 30 to cover GitHub's re-run window; result artifacts now stay
+  listed on the run page instead of disappearing when it finishes.
+
+- The `report-results` job now tells `julia-report-ci-results` which legs the run should
+  have heard from, so a leg whose results never arrived is named in the summary — and
+  fails the job when that leg had to pass — instead of being silently left out of it.
+  Previously the report only noticed when *no* blocking leg reported at all.
+
+- Re-runs no longer contend with fresh runs for the concurrency slot. The group had no
+  run or attempt component, so re-running an older run could cancel, or be cancelled by,
+  whatever was currently in flight for the same ref. First attempts keep the existing
+  group and cancel-in-progress behaviour; a re-run gets a group of its own.
+
 ### Added
 
 - New `test-log-level` option: the minimum log level for the code under test — your

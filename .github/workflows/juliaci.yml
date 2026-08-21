@@ -442,7 +442,11 @@ on:
 permissions: write-all
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  # The trailing run id is empty on a first attempt, so fresh runs share a group and
+  # cancel each other as before. A re-run gets a group of its own: it is a deliberate
+  # act on one specific run, so it must neither cancel nor be cancelled by whatever
+  # else is currently in flight for the same ref.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}-${{ github.run_attempt != '1' && github.run_id || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -460,7 +464,13 @@ jobs:
         with:
           name: lintresults
           path: lint-results.sarif
-          retention-days: 1
+          # Artifact names are unique per run, not per attempt, so re-running this job
+          # would otherwise conflict with the previous attempt's copy.
+          overwrite: true
+          # Long enough to cover GitHub's 30-day re-run window: "Re-run failed jobs"
+          # does not re-run the jobs that passed, so their artifacts have to outlive
+          # the first attempt for the report to stay complete.
+          retention-days: 30
           # A tool failure (exit code 2) produces no SARIF file.
           if-no-files-found: ignore
 
@@ -663,7 +673,14 @@ jobs:
       with:
         name: ${{ format('testitemresults-{0}-{1}-{2}', matrix.allow-failure && 'allowfail' || 'blocking', matrix.os, matrix.juliaup-channel) }}
         path: ${{ format('testitemresults-{0}-{1}.json', matrix.os, matrix.juliaup-channel) }}
-        retention-days: 1
+        # A re-run of this leg replaces its own result rather than colliding with the
+        # previous attempt's; legs that are not re-run keep theirs untouched. This is
+        # what makes exactly one artifact exist per leg per run, so the report job's
+        # `merge-multiple` download cannot pick up a stale copy.
+        overwrite: true
+        # See the lint upload: the results of legs that a partial re-run skips have to
+        # still be there for the report job to find.
+        retention-days: 30
     # No `julia-processcoverage` here: that action collects the `.cov` files
     # `Pkg.test(coverage=true)` leaves behind, and `juliati` has none — it merges coverage
     # in-process and writes the LCOV itself. Running it anyway found no `.cov` file for any
@@ -682,7 +699,9 @@ jobs:
         token: ${{ secrets.codecov_token }}
 
   report-results:
-    needs: [run-tests, lint]
+    # `compute-test-matrix` is already an ancestor via `run-tests`; naming it here adds
+    # no ordering, only access to its `test-matrix` output.
+    needs: [run-tests, lint, compute-test-matrix]
     if: ${{ !cancelled() && ((github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest')) }}
     runs-on: ubuntu-latest
     steps:
@@ -704,20 +723,38 @@ jobs:
           pattern: lintresults*
           path: lintresults
           merge-multiple: true
+      # Which legs the report should have heard from. The profile-name format lives
+      # here, next to the `profile-name` the run-tests job hands each leg, rather than
+      # being duplicated in the report action.
+      - name: Derive the expected profile names
+        id: expected-profiles
+        shell: bash
+        env:
+          TEST_MATRIX: ${{ needs.compute-test-matrix.outputs.test-matrix }}
+        run: |
+          # `report-results` runs even when the matrix job failed, in which case there is
+          # no matrix to check against — leave the list empty rather than failing here
+          # with a jq parse error on top of the real failure.
+          if [ -z "$TEST_MATRIX" ]; then
+            profiles='[]'
+          else
+            profiles=$(echo "$TEST_MATRIX" | jq -c '[.[] | {name: "Julia \(.["juliaup-channel"]):\(.os)", allowFailure: (.["allow-failure"] == true)}]')
+          fi
+          echo "profiles=$profiles" >> "$GITHUB_OUTPUT"
       - uses: julia-actions/julia-report-ci-results@v2
         with:
           results-path: testresults
           allowed-failure-results-path: allowfailresults
           lint-results-path: lintresults
           process-logs-retention-days: 14
-      - uses: geekyeggo/delete-artifact@v6
-        with:
-          name: |
-            testitemresults-*
-            lintresults
-          # Duplicate artifact names (e.g. from a retried matrix job) make the
-          # by-name delete 404 on the second copy; cleanup must not fail the run.
-          failOnError: false
+          # Without this the report has no idea how many legs it should have seen, so a
+          # leg whose artifact never arrived is silently left out of an otherwise green
+          # summary instead of being called out.
+          expected-profiles: ${{ steps.expected-profiles.outputs.profiles }}
+      # There is deliberately no artifact cleanup step here. Deleting the results at the
+      # end of the run is what broke "Re-run failed jobs": a partial re-run re-runs only
+      # the failed legs, so the results of every other leg have to survive the first
+      # attempt. `retention-days` on the uploads is the only expiry.
 
   deploy-docs:
     if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'DocDeploy') }}
