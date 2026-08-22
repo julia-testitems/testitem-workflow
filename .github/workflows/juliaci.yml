@@ -125,6 +125,10 @@ on:
         type: string
         required: false
         default: ""
+      activation-timeout:
+        type: string
+        required: false
+        default: ""
       # Overrides for draft PR runs
       draft-pr-include-release-versions:
         type: string
@@ -668,6 +672,7 @@ jobs:
         memory-threshold: ${{ inputs.memory-threshold }}
         schedule: ${{ inputs.schedule }}
         test-log-level: ${{ inputs.test-log-level }}
+        activation-timeout: ${{ inputs.activation-timeout }}
     - uses: actions/upload-artifact@v7
       if: ${{ !cancelled() }}
       with:
