@@ -125,6 +125,10 @@ on:
         type: string
         required: false
         default: ""
+      activation-timeout:
+        type: string
+        required: false
+        default: ""
       # 'auto' rather than the action's historical 'yes': forcing bounds checks recompiles
       # the whole dependency tree into a separate cache on every leg, which is most of what
       # made these runs slow. Set 'yes' to get Pkg.test's semantics back.
@@ -675,6 +679,7 @@ jobs:
         memory-threshold: ${{ inputs.memory-threshold }}
         schedule: ${{ inputs.schedule }}
         test-log-level: ${{ inputs.test-log-level }}
+        activation-timeout: ${{ inputs.activation-timeout }}
         check-bounds: ${{ inputs.check-bounds }}
     - uses: actions/upload-artifact@v7
       if: ${{ !cancelled() }}
