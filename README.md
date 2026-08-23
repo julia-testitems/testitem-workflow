@@ -97,7 +97,7 @@ log.
 To fix a failure locally, install the app once and format:
 
 ```
-julia> ]app add https://github.com/julia-vscode/FormatApp.jl
+pkg> app add FormatApp
 
 $ juliaformat .
 ```
