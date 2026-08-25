@@ -129,11 +129,12 @@ on:
         type: string
         required: false
         default: ""
-      # How long the whole run may go with no test process busy and no message about it
-      # before its remaining items are errored. Empty keeps the default (300 seconds);
-      # "none" turns the check off. Activating, revising and running a test item all count
-      # as progress, so this bounds a run whose workers died without reporting it, not a
-      # slow one.
+      # Opt-in: error the run's remaining items after this many seconds with no test
+      # process busy and no message about it. Empty (the default) never fails an idle run —
+      # it is only warned about in the log. Activating, revising and running a test item
+      # all count as progress, so this bounds a run whose workers died without reporting
+      # it, not a slow one. Worth setting where a hung run would otherwise burn the whole
+      # job timeout.
       run-stall:
         type: string
         required: false
