@@ -10,7 +10,7 @@ Add the following file as `.github/workflows/juliaci.yml` to the repository of y
 name: Julia CI
 
 on:
-  push: {branches: [main,master]}
+  push: {branches: [main,master], tags: ['v*']}
   pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
   issue_comment: {types: [created]}
   workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [DocDeploy,LintAndTest,TagBot]}}}
@@ -122,7 +122,7 @@ In the following example, draft PRs run only on the release version and Linux x6
 name: Julia CI
 
 on:
-  push: {branches: [main,master]}
+  push: {branches: [main,master], tags: ['v*']}
   pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
   issue_comment: {types: [created]}
   workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [DocDeploy,LintAndTest,TagBot]}}}
@@ -148,7 +148,7 @@ Release candidates are in the matrix by default and are allowed to fail. In the 
 name: Julia CI
 
 on:
-  push: {branches: [main,master]}
+  push: {branches: [main,master], tags: ['v*']}
   pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
   issue_comment: {types: [created]}
   workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [DocDeploy,LintAndTest,TagBot]}}}
