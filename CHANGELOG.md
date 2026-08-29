@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+### Added
+
+- **Versioned documentation now deploys for release tags — without a `DOCUMENTER_KEY`.**
+  Two things conspired to keep release docs from ever being built: the recommended
+  caller workflow had no `tags:` trigger, and the tags TagBot creates could not use one
+  anyway — TagBot authenticates with the run's `GITHUB_TOKEN`, and events created with
+  that token do not trigger further workflows. The classic fix is configuring an SSH
+  deploy key per repository for TagBot; instead, the run that executes TagBot now
+  snapshots the repository's tags around the TagBot step and a new `deploy-tagged-docs`
+  job deploys the docs for each tag it created, overriding `GITHUB_REF` and
+  `GITHUB_EVENT_NAME` so Documenter sees the tag-push build it expects. This works with
+  existing caller workflow files as they are.
+- The recommended caller trigger gains `tags: ['**']`, which covers the other route: a
+  release tag pushed by hand deploys its docs via the ordinary `push` trigger. The
+  trigger is deliberately *every* tag while the workflow only acts on `v*` tags
+  (`deploy-tagged-docs` filters what TagBot created; `deploy-docs` checks
+  `startsWith(github.ref_name, 'v')`), so future tag-driven features need changes only
+  in this repository, not in every caller's workflow file.
+
+### Changed
+
+- Tag pushes run only docs deployment. Lint, format and the test matrix are gated to
+  branch pushes — a tag names a commit that already went through CI on its branch, so
+  re-running the whole matrix on it bought nothing but CI minutes.
+
 ### Fixed
 
 - **GitHub's "Re-run failed jobs" now works.** A partial re-run keeps the same run id
