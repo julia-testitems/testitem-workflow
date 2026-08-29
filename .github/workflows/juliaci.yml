@@ -471,8 +471,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Push events cover both branches and tags, and the two mean different things here: a
+  # branch push is new code, a tag push is a release of a commit that already went
+  # through CI on its branch. So lint/format/tests only run for branch pushes
+  # (`github.ref_type == 'branch'` — in a reusable workflow the github context is the
+  # caller's), while docs deployment also runs for `v*` tags to build the versioned
+  # documentation. A tag that does not start with `v` currently runs nothing; callers
+  # are told to trigger on every tag (`tags: ['**']`) so that future tag-driven
+  # features only need changes here, not in every caller's workflow file.
   lint:
-    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
+    if: ${{ ((github.event_name == 'push' && github.ref_type == 'branch') || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -499,7 +507,7 @@ jobs:
   # locally). Runs whenever lint/tests run; a repo opts in by having a
   # JuliaFormat.toml anywhere in its tree — without one, every step no-ops.
   format:
-    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
+    if: ${{ ((github.event_name == 'push' && github.ref_type == 'branch') || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -509,7 +517,7 @@ jobs:
           require-config: true
 
   compute-test-matrix:
-    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
+    if: ${{ ((github.event_name == 'push' && github.ref_type == 'branch') || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
     runs-on: ubuntu-latest
     outputs:
       test-matrix: ${{ steps.compute-test-matrix.outputs.test-matrix }}
@@ -588,7 +596,7 @@ jobs:
           allow-failure: ${{ steps.resolve.outputs.allow-failure }}
 
   run-tests:
-    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
+    if: ${{ ((github.event_name == 'push' && github.ref_type == 'branch') || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
     needs: compute-test-matrix
     strategy:
         fail-fast: false
@@ -726,7 +734,7 @@ jobs:
     # `compute-test-matrix` is already an ancestor via `run-tests`; naming it here adds
     # no ordering, only access to its `test-matrix` output.
     needs: [run-tests, lint, compute-test-matrix]
-    if: ${{ !cancelled() && ((github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest')) }}
+    if: ${{ !cancelled() && (((github.event_name == 'push' && github.ref_type == 'branch') || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest')) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v8
@@ -781,7 +789,11 @@ jobs:
       # attempt. `retention-days` on the uploads is the only expiry.
 
   deploy-docs:
-    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'DocDeploy') }}
+    # Unlike the test jobs, this one also runs for `v*` tag pushes: that is how
+    # Documenter builds the versioned docs for a release tag pushed by hand.
+    # (Expressions have no glob matching; `startsWith` is the `v*` equivalent.)
+    # Tags created by TagBot never reach this trigger — see deploy-tagged-docs.
+    if: ${{ (github.event_name == 'push' && (github.ref_type == 'branch' || startsWith(github.ref_name, 'v'))) || github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'DocDeploy') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -802,8 +814,74 @@ jobs:
   tagbot:
     if: ${{ (github.event_name == 'issue_comment' && github.actor == 'JuliaTagBot') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'TagBot') }}
     runs-on: ubuntu-latest
+    outputs:
+      new-tags: ${{ steps.diff-tags.outputs.new-tags }}
     steps:
+      # The tag list is snapshotted around the TagBot step so deploy-tagged-docs knows
+      # exactly which tags this run created — TagBot itself does not report them.
+      - name: Record the tags that exist before TagBot runs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api --paginate "repos/${GITHUB_REPOSITORY}/tags" --jq '.[].name' | sort > "${RUNNER_TEMP}/tags-before"
       - uses: JuliaRegistries/TagBot@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branches: true
+      - name: Find the tags TagBot created
+        id: diff-tags
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/tags" --jq '.[].name' | sort > "${RUNNER_TEMP}/tags-after"
+          # Only `v*` tags, matching the deploy-docs tag policy; TagBot only creates
+          # `v<version>` tags anyway. `[]` when TagBot created nothing (for example a
+          # trigger comment for an already-tagged version).
+          new_tags=$(comm -13 "${RUNNER_TEMP}/tags-before" "${RUNNER_TEMP}/tags-after" | jq --compact-output --raw-input --null-input '[inputs | select(startswith("v"))]')
+          echo "New tags: $new_tags"
+          echo "new-tags=$new_tags" >> "$GITHUB_OUTPUT"
+
+  # Deploys the versioned documentation for the tags TagBot just created. TagBot
+  # authenticates with the run's GITHUB_TOKEN, and events created with that token do
+  # not trigger workflows (GitHub suppresses cascading runs), so the caller's `tags:`
+  # push trigger never fires for a TagBot tag and the release's docs would silently
+  # never be built. The classic fix is giving TagBot an SSH deploy key
+  # (DOCUMENTER_KEY), which every repository would have to generate and configure;
+  # riding the run that created the tag needs no per-repository secret at all.
+  deploy-tagged-docs:
+    needs: tagbot
+    if: ${{ needs.tagbot.outputs.new-tags != '' && needs.tagbot.outputs.new-tags != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: ${{ fromJson(needs.tagbot.outputs.new-tags) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ matrix.tag }}
+      - name: Check file existence
+        id: check_files
+        uses: andstor/file-existence-action@v3
+        with:
+          files: "docs/make.jl"
+      - uses: julia-actions/cache@v3
+        if: steps.check_files.outputs.files_exists == 'true'
+      - uses: julia-actions/julia-buildpkg@v1
+        if: steps.check_files.outputs.files_exists == 'true'
+      - uses: julia-actions/julia-docdeploy@v1
+        if: steps.check_files.outputs.files_exists == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Documenter decides what kind of build this is from these environment
+          # variables, and the run's real values describe the TagBot trigger (an
+          # issue_comment on the default branch), for which deploydocs deploys
+          # nothing. The override makes deploydocs see exactly what it would have
+          # seen had the tag push triggered its own run — a push build of the tag —
+          # so it deploys the versioned docs folder. Pushing to gh-pages with
+          # GITHUB_TOKEN is unaffected by the token's restrictions, which block
+          # triggering further workflows and modifying .github/workflows files,
+          # neither of which happens here.
+          GITHUB_REF: refs/tags/${{ matrix.tag }}
+          GITHUB_EVENT_NAME: push

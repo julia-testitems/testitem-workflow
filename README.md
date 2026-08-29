@@ -10,7 +10,7 @@ Add the following file as `.github/workflows/juliaci.yml` to the repository of y
 name: Julia CI
 
 on:
-  push: {branches: [main,master], tags: ['v*']}
+  push: {branches: [main,master], tags: ['**']}
   pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
   issue_comment: {types: [created]}
   workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [DocDeploy,LintAndTest,TagBot]}}}
@@ -58,6 +58,15 @@ The `juliaci.yml` workflow accepts a number of configuration options that contro
 These describe how the test processes behave rather than how much gets tested, so unlike `filter` and `testitem-timeout` they have no per-trigger (`pr-`, `main-`, …) overrides.
 
 The `codecov_token` secret is only used when coverage is collected; a repository that sets `coverage: false` can leave it out.
+
+## Versioned documentation
+
+Documenter deploys the documentation for a release from a build of its `v*` tag. Two routes lead there, and both work without any extra secret:
+
+- **Tags created by TagBot** (the normal registry release flow): tags pushed with the workflow's `GITHUB_TOKEN` never trigger another workflow run, so the `tags:` trigger does not fire for them. Instead, the same run that executes TagBot detects the tags it created and deploys their docs directly — no `DOCUMENTER_KEY` deploy key needs to be configured.
+- **Tags pushed by hand**: the `tags: ['**']` trigger in the workflow file above fires, and the docs for the tag are deployed. A tag push runs *only* the docs job — the tagged commit already went through lint and tests on its branch, so the test matrix is not repeated.
+
+The trigger is deliberately every tag (`'**'`) while the workflow itself only acts on tags starting with `v`: future tag-driven features can then be added to the reusable workflow without every consumer having to touch their workflow file again. If a tag's docs deployment ever needs to be re-run by hand, trigger the `DocDeploy` feature via workflow dispatch and select the tag as the ref.
 
 ## Debug logging
 
@@ -122,7 +131,7 @@ In the following example, draft PRs run only on the release version and Linux x6
 name: Julia CI
 
 on:
-  push: {branches: [main,master], tags: ['v*']}
+  push: {branches: [main,master], tags: ['**']}
   pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
   issue_comment: {types: [created]}
   workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [DocDeploy,LintAndTest,TagBot]}}}
@@ -148,7 +157,7 @@ Release candidates are in the matrix by default and are allowed to fail. In the 
 name: Julia CI
 
 on:
-  push: {branches: [main,master], tags: ['v*']}
+  push: {branches: [main,master], tags: ['**']}
   pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
   issue_comment: {types: [created]}
   workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [DocDeploy,LintAndTest,TagBot]}}}
