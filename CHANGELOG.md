@@ -11,9 +11,12 @@
   that token do not trigger further workflows. The classic fix is configuring an SSH
   deploy key per repository for TagBot; instead, the run that executes TagBot now
   snapshots the repository's tags around the TagBot step and a new `deploy-tagged-docs`
-  job deploys the docs for each tag it created, overriding `GITHUB_REF` and
-  `GITHUB_EVENT_NAME` so Documenter sees the tag-push build it expects. This works with
-  existing caller workflow files as they are.
+  job deploys the docs for each tag it created, exporting `GITHUB_REF` and
+  `GITHUB_EVENT_NAME` inside the docs build script so Documenter sees the tag-push
+  build it expects. (Exporting in-script rather than via step `env:` matters: the
+  runner re-applies the default `GITHUB_*` variables to every step's environment, so
+  an `env:`-level override never reaches the build and Documenter silently refuses to
+  deploy.) This works with existing caller workflow files as they are.
 - The recommended caller trigger gains `tags: ['**']`, which covers the other route: a
   release tag pushed by hand deploys its docs via the ordinary `push` trigger. The
   trigger is deliberately *every* tag while the workflow only acts on `v*` tags
