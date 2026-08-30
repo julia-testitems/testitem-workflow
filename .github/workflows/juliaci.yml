@@ -870,18 +870,44 @@ jobs:
         if: steps.check_files.outputs.files_exists == 'true'
       - uses: julia-actions/julia-buildpkg@v1
         if: steps.check_files.outputs.files_exists == 'true'
-      - uses: julia-actions/julia-docdeploy@v1
+      # julia-docdeploy is deliberately not used here: the GITHUB_REF /
+      # GITHUB_EVENT_NAME overrides it would need cannot be passed as step env —
+      # GitHub's runner re-applies the default GITHUB_* variables to every step's
+      # environment, so Documenter still saw the issue_comment event and refused
+      # to deploy. Exporting inside the run script is the one place the runner
+      # cannot clobber. The steps below mirror what julia-docdeploy@v1 does
+      # (logger env, develop+instantiate, make.jl).
+      - name: Install GitHubActions.jl in its own (shared) environment
         if: steps.check_files.outputs.files_exists == 'true'
+        shell: julia --color=yes {0}
+        run: |
+          using Pkg
+          Pkg.activate("docs-logger-env"; shared=true)
+          Pkg.add(Pkg.PackageSpec(name="GitHubActions", version="0.1"))
+      - name: Build and deploy the docs for the tag
+        if: steps.check_files.outputs.files_exists == 'true'
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Documenter decides what kind of build this is from these environment
-          # variables, and the run's real values describe the TagBot trigger (an
+          TAG: ${{ matrix.tag }}
+        run: |
+          # Documenter decides what kind of build this is from these variables,
+          # and the run's real values describe the TagBot trigger (an
           # issue_comment on the default branch), for which deploydocs deploys
-          # nothing. The override makes deploydocs see exactly what it would have
-          # seen had the tag push triggered its own run — a push build of the tag —
-          # so it deploys the versioned docs folder. Pushing to gh-pages with
-          # GITHUB_TOKEN is unaffected by the token's restrictions, which block
-          # triggering further workflows and modifying .github/workflows files,
-          # neither of which happens here.
-          GITHUB_REF: refs/tags/${{ matrix.tag }}
-          GITHUB_EVENT_NAME: push
+          # nothing. Exported here, deploydocs sees exactly what it would have
+          # seen had the tag push triggered its own run — a push build of the
+          # tag — so it deploys the versioned docs folder. Pushing to gh-pages
+          # with GITHUB_TOKEN is unaffected by the token's restrictions, which
+          # block triggering further workflows and modifying .github/workflows
+          # files, neither of which happens here.
+          export GITHUB_REF="refs/tags/${TAG}"
+          export GITHUB_EVENT_NAME=push
+          julia --color=yes --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+          julia --color=yes --project=docs -e '
+              @eval Module() begin
+                  push!(LOAD_PATH, "@docs-logger-env") # access GitHubActions.jl
+                  import Logging, GitHubActions
+                  Logging.global_logger(GitHubActions.GitHubActionsLogger())
+                  pop!(LOAD_PATH)
+              end
+              include("docs/make.jl")'
