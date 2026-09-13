@@ -77,6 +77,17 @@ on:
         type: string
         required: false
         default: ""
+      # Opt-in: resolve and instantiate the checkout's own project in place before the
+      # test items run, writing a `Manifest.toml` into the tree and installing its
+      # dependencies into the depot. The test items themselves never need this — their
+      # test processes instantiate a sandbox of their own — but a test item that spawns
+      # its own `julia --project=<checkout>` child leaves that child with only the tree
+      # to resolve against, and this is what makes the tree resolvable. It is the one
+      # part of `julia-buildpkg`'s behaviour that dropping it took away.
+      instantiate-project:
+        type: boolean
+        required: false
+        default: false
       testitem-timeout:
         type: string
         required: false
@@ -645,7 +656,14 @@ jobs:
     # No `julia-buildpkg` here. The test processes instantiate, build and precompile
     # the test environment themselves, in a sandbox that mirrors the package; buildpkg
     # only resolved the checkout's own project in place -- writing a `Manifest.toml`
-    # into the tree -- and installed a registry Pkg installs anyway.
+    # into the tree -- and installed a registry Pkg installs anyway. The in-place
+    # resolve is reinstated by `instantiate-project` below, for the one thing the
+    # sandbox does not cover: test items that spawn `julia --project=<checkout>`
+    # children of their own.
+    - name: Instantiate the checkout project
+      if: ${{ inputs.instantiate-project }}
+      shell: bash
+      run: julia --project=. -e 'import Pkg; Pkg.instantiate()'
     - name: Run worker prep script
       if: ${{ needs.compute-test-matrix.outputs.github_job_prep_script != '' }}
       run: julia ${{ needs.compute-test-matrix.outputs.github_job_prep_script }}
