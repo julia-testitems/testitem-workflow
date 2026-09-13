@@ -26,6 +26,35 @@
 
 ### Changed
 
+- **`julia-run-testitems` now caches its own toolkit, in a depot of its own.** The
+  toolkit — juliati and the tree its manifest pins — is always built by
+  `julia +release`, whatever `juliaup-channel` a leg runs on, so it is identical on
+  every leg of the matrix. It nonetheless lived in the default depot, which the
+  `run-tests` job caches per leg, so every leg precompiled it and then cached its own
+  copy. On a 44-leg DebugAdapter.jl run that measured 106 minutes of precompilation
+  per run rebuilding the same thing, and roughly half of every leg's wall time. It
+  mattered doubly because the depot cache is per leg and per ref: several
+  julia-vscode repositories were pinned at GitHub's fixed 10 GB per-repository cache
+  limit, where the LRU discards entries before they can be reused.
+
+  The action now keeps the toolkit under `RUNNER_TEMP` and caches it itself, keyed on
+  the runner OS and architecture, the version `release` resolves to, and a hash of its
+  manifest — no matrix value, so a single entry serves the whole matrix.
+
+  This is not a return to the private depot that was removed from the action in v2
+  (see the note under the `run-tests` cache entry below). That one keyed on the *leg's*
+  Julia version as well, so it was per-leg like everything else, and it left the test
+  processes inside the private depot — which is why the job-level cache captured
+  nothing and why it had to go. The test processes now go back to the job's depot
+  explicitly, so `julia-actions/cache` still captures their precompilation exactly as
+  it does today; only the version-independent toolkit is carved out.
+
+  Nothing in this workflow changes. Callers need no changes either. The per-leg
+  `julia-actions/cache` entries should shrink, by less in repositories whose own
+  dependencies overlap the toolkit's (LanguageServer.jl and JuliaWorkspaces.jl both
+  depend on JuliaWorkspaces, CSTParser, Salsa and JSONRPC, which the two depots then
+  hold separately) and by more in those that do not, such as DebugAdapter.jl.
+
 - Tag pushes run only docs deployment. Lint, format and the test matrix are gated to
   branch pushes — a tag names a commit that already went through CI on its branch, so
   re-running the whole matrix on it bought nothing but CI minutes.
