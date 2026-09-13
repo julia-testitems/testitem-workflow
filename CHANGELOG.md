@@ -26,6 +26,19 @@
 
 ### Changed
 
+- **`julia-actions/julia-buildpkg` is gone from every job.** In `run-tests` the test
+  processes instantiate, build and precompile the test environment themselves, in a
+  sandbox that mirrors the package under test; buildpkg only resolved the checkout's own
+  project in place (writing a `Manifest.toml` into the tree) and installed a General
+  registry that Pkg installs on its own from Julia 1.5 on (the workflow's own clone step
+  still covers older versions). In `deploy-docs` and `deploy-tagged-docs` the docs build
+  develops the package into `docs/` and instantiates that environment, which resolves,
+  downloads and builds everything it needs. The one thing buildpkg contributed beyond
+  that was exporting `JULIA_PKG_SERVER_REGISTRY_PREFERENCE=eager` for the job, so a
+  version registered minutes earlier is resolvable without waiting for the package
+  server's conservative snapshot; the three jobs now set that themselves. Callers need
+  no changes.
+
 - **`julia-run-testitems` now caches its own toolkit, in a depot of its own.** The
   toolkit — juliati and the tree its manifest pins — is always built by
   `julia +release`, whatever `juliaup-channel` a leg runs on, so it is identical on
