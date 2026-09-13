@@ -606,19 +606,24 @@ jobs:
     # Legs the matrix marked as allowed to fail report their results but do not fail
     # the run; report-results tells the two apart by which artifact they land in.
     continue-on-error: ${{ matrix.allow-failure }}
+    env:
+      # `julia-buildpkg` used to export this for the job. Without it Pkg takes the
+      # package server's conservative registry snapshot, which lags registration by
+      # up to an hour or so, so a version registered minutes ago is not resolvable yet.
+      JULIA_PKG_SERVER_REGISTRY_PREFERENCE: eager
     steps:
     - uses: actions/checkout@v7
     - uses: julia-actions/install-juliaup@v3
       with:
         channel:  ${{ matrix.juliaup-channel }}
     - uses: julia-actions/cache@v3
-    # `julia-buildpkg` only installs a registry from Julia 1.5 on, and Pkg before
-    # that does not clone one on demand under `Pkg.build` either. A leg without a
-    # usable registry resolves every dependency to "has no known versions", and
-    # because the depot is cached afterwards, a registry left half-written stays
-    # broken for every later run of that leg. So the registry is checked for the
-    # `Registry.toml` old Pkg reads, not merely for the folder, and anything else
-    # sitting in its place is replaced. A complete registry is left alone.
+    # Pkg installs the General registry itself on first resolve from Julia 1.5 on;
+    # before that it does not clone one on demand. A leg without a usable registry
+    # resolves every dependency to "has no known versions", and because the depot is
+    # cached afterwards, a registry left half-written stays broken for every later
+    # run of that leg. So the registry is checked for the `Registry.toml` old Pkg
+    # reads, not merely for the folder, and anything else sitting in its place is
+    # replaced. A complete registry is left alone.
     - name: Install the General registry on Julia < 1.5
       shell: bash
       run: |
@@ -637,7 +642,10 @@ jobs:
           mkpath(dirname(general))
           run(`git clone --quiet --depth=1 https://github.com/JuliaRegistries/General.git $general`)
         '
-    - uses: julia-actions/julia-buildpkg@v1
+    # No `julia-buildpkg` here. The test processes instantiate, build and precompile
+    # the test environment themselves, in a sandbox that mirrors the package; buildpkg
+    # only resolved the checkout's own project in place -- writing a `Manifest.toml`
+    # into the tree -- and installed a registry Pkg installs anyway.
     - name: Run worker prep script
       if: ${{ needs.compute-test-matrix.outputs.github_job_prep_script != '' }}
       run: julia ${{ needs.compute-test-matrix.outputs.github_job_prep_script }}
@@ -795,6 +803,9 @@ jobs:
     # Tags created by TagBot never reach this trigger — see deploy-tagged-docs.
     if: ${{ (github.event_name == 'push' && (github.ref_type == 'branch' || startsWith(github.ref_name, 'v'))) || github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'DocDeploy') }}
     runs-on: ubuntu-latest
+    env:
+      # See run-tests.
+      JULIA_PKG_SERVER_REGISTRY_PREFERENCE: eager
     steps:
       - uses: actions/checkout@v7
       - name: Check file existence
@@ -804,8 +815,9 @@ jobs:
           files: "docs/make.jl"
       - uses: julia-actions/cache@v3
         if: steps.check_files.outputs.files_exists == 'true'
-      - uses: julia-actions/julia-buildpkg@v1
-        if: steps.check_files.outputs.files_exists == 'true'
+      # No `julia-buildpkg`: the docs build develops the package into `docs/` and
+      # instantiates that environment, which resolves, downloads and builds
+      # everything it needs, including the package's own dependencies.
       - uses: julia-actions/julia-docdeploy@v1
         if: steps.check_files.outputs.files_exists == 'true'
         env:
@@ -857,6 +869,9 @@ jobs:
       fail-fast: false
       matrix:
         tag: ${{ fromJson(needs.tagbot.outputs.new-tags) }}
+    env:
+      # See run-tests.
+      JULIA_PKG_SERVER_REGISTRY_PREFERENCE: eager
     steps:
       - uses: actions/checkout@v7
         with:
@@ -868,8 +883,9 @@ jobs:
           files: "docs/make.jl"
       - uses: julia-actions/cache@v3
         if: steps.check_files.outputs.files_exists == 'true'
-      - uses: julia-actions/julia-buildpkg@v1
-        if: steps.check_files.outputs.files_exists == 'true'
+      # No `julia-buildpkg`: the docs build develops the package into `docs/` and
+      # instantiates that environment, which resolves, downloads and builds
+      # everything it needs, including the package's own dependencies.
       # julia-docdeploy is deliberately not used here: the GITHUB_REF /
       # GITHUB_EVENT_NAME overrides it would need cannot be passed as step env —
       # GitHub's runner re-applies the default GITHUB_* variables to every step's
