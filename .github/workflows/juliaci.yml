@@ -611,7 +611,25 @@ jobs:
     - uses: julia-actions/install-juliaup@v3
       with:
         channel:  ${{ matrix.juliaup-channel }}
+    # One CPU target for the whole job, exported to `GITHUB_ENV` before anything
+    # precompiles into the depot. The per-leg depot cached below moves between runner
+    # CPUs, and Julia's default target, `native`, produces package images that a runner
+    # with a different CPU refuses and rebuilds (julia-actions/cache#114). The portable
+    # target fixes that, but only if every step agrees on it: `JULIA_CPU_TARGET` is read
+    # by the precompilation workers a process spawns, not by the process itself, so a
+    # step given a target the depot was not built with accepts the existing images and
+    # then watches its worker refuse them -- from Julia 1.13 (`--compiled-modules=strict`
+    # workers) that is an error, not a slow run. Hence job-wide rather than in
+    # `julia-run-testitems`, and hence the token in the cache key: a restored depot
+    # holding images built under another target is the same mismatch, so the key rotates
+    # with the target. The first run after a rotation is cold on every leg, once.
+    - uses: julia-actions/julia-run-testitems/cpu-target@v2
+      id: cpu-target
+      with:
+        juliaup-channel: ${{ matrix.juliaup-channel }}
     - uses: julia-actions/cache@v3
+      with:
+        cache-name: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }};cpu-target=${{ steps.cpu-target.outputs.key }}
     # `julia-buildpkg` only installs a registry from Julia 1.5 on, and Pkg before
     # that does not clone one on demand under `Pkg.build` either. A leg without a
     # usable registry resolves every dependency to "has no known versions", and

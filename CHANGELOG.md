@@ -26,6 +26,31 @@
 
 ### Changed
 
+- **The `run-tests` job now precompiles its depot under one portable CPU target.** The
+  per-leg depot that `julia-actions/cache` restores moves between runner CPUs, and
+  Julia's default target, `native`, produces package images a runner with a different
+  CPU refuses and rebuilds — on a mixed fleet, on roughly a fifth of cache hits
+  ([julia-actions/cache#114](https://github.com/julia-actions/cache/issues/114)). The
+  job now runs the new `julia-run-testitems/cpu-target` helper right after
+  `install-juliaup`: it resolves the multi-versioned target for the leg's Julia (the
+  one Julia's own binaries are built with; `pentium4` on 32-bit legs, `generic` on
+  aarch64), probes it, and exports `JULIA_CPU_TARGET` for every later step of the job —
+  the depot cache, `julia-buildpkg`, the prep script and the test processes alike.
+
+  Job-wide is the only place this can live. `JULIA_CPU_TARGET` does not change the
+  process it is set on; it is read by the precompilation workers that process spawns.
+  A step handed a target the depot was not built with accepts the depot's existing
+  images and then has its worker refuse the very same files — up to Julia 1.12 a nested
+  recompile on every run, from 1.13 (whose workers run with `--compiled-modules=strict`)
+  a hard `Precompiled image ... not available` error. That is what took every Julia
+  1.13 leg down when `julia-run-testitems` briefly set the target for the test
+  processes alone; the action no longer does, and follows the job's target instead.
+
+  The helper's `key` output goes into the depot's cache key, so the key rotates with
+  the target and a restored depot never holds images built under another one. The
+  first run after this change is therefore cold on every leg, once; caches under the
+  old key linger until GitHub evicts them. Callers need no changes.
+
 - **`julia-run-testitems` now caches its own toolkit, in a depot of its own.** The
   toolkit — juliati and the tree its manifest pins — is always built by
   `julia +release`, whatever `juliaup-channel` a leg runs on, so it is identical on
