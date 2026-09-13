@@ -23,6 +23,14 @@
   (`deploy-tagged-docs` filters what TagBot created; `deploy-docs` checks
   `startsWith(github.ref_name, 'v')`), so future tag-driven features need changes only
   in this repository, not in every caller's workflow file.
+- **New `instantiate-project` input** (default `false`): resolve and instantiate the
+  checkout's own project in place before the test items run, writing a `Manifest.toml`
+  into the tree and installing its dependencies into the depot. The test items
+  themselves never need this — their test processes instantiate a sandbox of their own —
+  but a test item that spawns its own `julia --project=<checkout>` child leaves that
+  child with only the tree to resolve against, and this is what makes the tree
+  resolvable. It reinstates, opt-in, the one part of `julia-buildpkg`'s behaviour that
+  dropping it (see below) took away.
 
 ### Changed
 
@@ -37,7 +45,12 @@
   that was exporting `JULIA_PKG_SERVER_REGISTRY_PREFERENCE=eager` for the job, so a
   version registered minutes earlier is resolvable without waiting for the package
   server's conservative snapshot; the three jobs now set that themselves. Callers need
-  no changes.
+  no changes — with one exception: buildpkg's in-place resolve was also what let a test
+  item spawn a `julia --project=<checkout>` child of its own, since the sandbox the
+  test processes use lives outside the tree. The five `cache-infra` items of
+  JuliaWorkspaces.jl broke exactly that way. Such repositories should set the new
+  `instantiate-project` input (below), or instantiate the checkout in their
+  `github_job_prep_script`.
 
 - **`julia-run-testitems` now caches its own toolkit, in a depot of its own.** The
   toolkit — juliati and the tree its manifest pins — is always built by
