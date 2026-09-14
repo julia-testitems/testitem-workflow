@@ -478,10 +478,56 @@ concurrency:
   # cancel each other as before. A re-run gets a group of its own: it is a deliberate
   # act on one specific run, so it must neither cancel nor be cancelled by whatever
   # else is currently in flight for the same ref.
+  # A `closed` pull_request event -- from callers that add `closed` to their trigger
+  # types -- also lands in the group, and that entry is what cancels a PR's in-flight
+  # run the moment the PR is closed or merged; see cancel-closed-pr-runs.
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}-${{ github.run_attempt != '1' && github.run_id || '' }}
   cancel-in-progress: true
 
 jobs:
+  # Cancels this pull request's remaining CI when the PR is closed or merged. GitHub
+  # does not do this by itself: closing a PR emits no event callers subscribe to by
+  # default, so an in-flight run keeps occupying runners until it finishes on its
+  # own. Callers opt in by adding `closed` to their pull_request trigger types. The
+  # resulting run shares the concurrency group of the PR's normal runs (same ref,
+  # same event name), so merely starting it cancels the queued or in-progress run
+  # via cancel-in-progress above -- no API call and no token permissions, which is
+  # what makes that path work for fork PRs, where GITHUB_TOKEN is read-only. Every
+  # other job skips on `closed` (see their conditions), leaving this one, which
+  # covers what the concurrency group misses: re-run attempts, whose group includes
+  # their run id. Cancelling those does need `actions: write`, so on a fork PR the
+  # cancel calls fail and are tolerated.
+  cancel-closed-pr-runs:
+    if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel the closed PR's queued and in-progress runs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          HEAD_OWNER: ${{ github.event.pull_request.head.repo.owner.login }}
+        run: |
+          # Only runs of this same workflow, for the PR's head branch, and from the
+          # PR's own head repository: the branch filter alone would also match a
+          # branch of the same name pushed to a different fork.
+          if [ -z "$HEAD_OWNER" ]; then
+            echo "PR head repository is gone; nothing to cancel."
+            exit 0
+          fi
+          workflow_id=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --jq .workflow_id)
+          for status in queued in_progress; do
+            gh api --method GET --paginate \
+              -f status="$status" -f branch="$HEAD_BRANCH" -F per_page=100 \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_id}/runs" \
+              --jq '.workflow_runs[] | select(.head_repository.owner.login == env.HEAD_OWNER) | .id' |
+            while read -r run_id; do
+              if [ "$run_id" = "$GITHUB_RUN_ID" ]; then continue; fi
+              echo "Cancelling run ${run_id}"
+              gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel" || true
+            done
+          done
+
   # Push events cover both branches and tags, and the two mean different things here: a
   # branch push is new code, a tag push is a release of a commit that already went
   # through CI on its branch. So lint/format/tests only run for branch pushes
@@ -491,7 +537,7 @@ jobs:
   # are told to trigger on every tag (`tags: ['**']`) so that future tag-driven
   # features only need changes here, not in every caller's workflow file.
   lint:
-    if: ${{ ((github.event_name == 'push' && github.ref_type == 'branch') || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
+    if: ${{ ((github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'pull_request' && github.event.action != 'closed')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -518,7 +564,7 @@ jobs:
   # locally). Runs whenever lint/tests run; a repo opts in by having a
   # JuliaFormat.toml anywhere in its tree — without one, every step no-ops.
   format:
-    if: ${{ ((github.event_name == 'push' && github.ref_type == 'branch') || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
+    if: ${{ ((github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'pull_request' && github.event.action != 'closed')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -528,7 +574,7 @@ jobs:
           require-config: true
 
   compute-test-matrix:
-    if: ${{ ((github.event_name == 'push' && github.ref_type == 'branch') || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
+    if: ${{ ((github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'pull_request' && github.event.action != 'closed')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
     runs-on: ubuntu-latest
     outputs:
       test-matrix: ${{ steps.compute-test-matrix.outputs.test-matrix }}
@@ -607,7 +653,7 @@ jobs:
           allow-failure: ${{ steps.resolve.outputs.allow-failure }}
 
   run-tests:
-    if: ${{ ((github.event_name == 'push' && github.ref_type == 'branch') || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
+    if: ${{ ((github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'pull_request' && github.event.action != 'closed')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest') }}
     needs: compute-test-matrix
     strategy:
         fail-fast: false
@@ -760,7 +806,7 @@ jobs:
     # `compute-test-matrix` is already an ancestor via `run-tests`; naming it here adds
     # no ordering, only access to its `test-matrix` output.
     needs: [run-tests, lint, compute-test-matrix]
-    if: ${{ !cancelled() && (((github.event_name == 'push' && github.ref_type == 'branch') || github.event_name == 'pull_request') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest')) }}
+    if: ${{ !cancelled() && (((github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'pull_request' && github.event.action != 'closed')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'LintAndTest')) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v8
@@ -819,7 +865,7 @@ jobs:
     # Documenter builds the versioned docs for a release tag pushed by hand.
     # (Expressions have no glob matching; `startsWith` is the `v*` equivalent.)
     # Tags created by TagBot never reach this trigger — see deploy-tagged-docs.
-    if: ${{ (github.event_name == 'push' && (github.ref_type == 'branch' || startsWith(github.ref_name, 'v'))) || github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'DocDeploy') }}
+    if: ${{ (github.event_name == 'push' && (github.ref_type == 'branch' || startsWith(github.ref_name, 'v'))) || (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'workflow_dispatch' && github.event.inputs.feature == 'DocDeploy') }}
     runs-on: ubuntu-latest
     env:
       # See run-tests.
