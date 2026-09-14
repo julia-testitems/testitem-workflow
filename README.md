@@ -11,7 +11,7 @@ name: Julia CI
 
 on:
   push: {branches: [main,master], tags: ['**']}
-  pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
+  pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft,closed]}
   issue_comment: {types: [created]}
   workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [DocDeploy,LintAndTest,TagBot]}}}
 
@@ -59,6 +59,21 @@ The `juliaci.yml` workflow accepts a number of configuration options that contro
 These describe how the test processes behave rather than how much gets tested, so unlike `filter` and `testitem-timeout` they have no per-trigger (`pr-`, `main-`, …) overrides.
 
 The `codecov_token` secret is only used when coverage is collected; a repository that sets `coverage: false` can leave it out.
+
+## Cancelling runs for closed pull requests
+
+The `closed` entry in the `pull_request` trigger types above is what lets the workflow
+cancel a pull request's CI the moment the PR is closed or merged. GitHub does not do
+this by itself — without the entry, a run for a just-closed PR keeps occupying runners
+until it finishes on its own. The `closed` event run shares its concurrency group with
+the PR's normal runs, so starting it cancels whatever is queued or in progress for the
+PR (this also works for PRs from forks); a small job in the workflow additionally
+cancels re-run attempts, which live in concurrency groups of their own. Everything
+else is skipped on a `closed` event, so the run finishes in seconds and does not
+disturb required checks.
+
+Callers created before this feature existed opt in by adding `closed` to the
+`pull_request` types in their workflow file, as in the snippet above.
 
 ## Versioned documentation
 
@@ -133,7 +148,7 @@ name: Julia CI
 
 on:
   push: {branches: [main,master], tags: ['**']}
-  pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
+  pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft,closed]}
   issue_comment: {types: [created]}
   workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [DocDeploy,LintAndTest,TagBot]}}}
 
@@ -159,7 +174,7 @@ name: Julia CI
 
 on:
   push: {branches: [main,master], tags: ['**']}
-  pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft]}
+  pull_request: {types: [opened,synchronize,reopened,ready_for_review,converted_to_draft,closed]}
   issue_comment: {types: [created]}
   workflow_dispatch: {inputs: {feature: {type: choice, description: What to run, options: [DocDeploy,LintAndTest,TagBot]}}}
 
