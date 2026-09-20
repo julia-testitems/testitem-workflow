@@ -48,7 +48,7 @@ The `juliaci.yml` workflow accepts a number of configuration options that contro
 - `testitem-timeout` (string, default `""`): Per test item timeout in seconds. If a single test item takes longer than this duration, it is terminated and reported as errored. Unset by default: a test item can legitimately take arbitrarily long, and a timeout that fires is unrecoverable, so this workflow does not impose a deadline you did not ask for. Set it when you want a hang diagnosed — on a timeout the worker dumps task backtraces and a CPU profile into the item's output, which you get no other way. Without one, a hung item runs until the job hits its own `timeout-minutes` (GitHub default: 360 minutes) and nothing identifies which item hung.
 - `junit-path` (string, default `""`): Path to write the test results as JUnit XML. Most CI test reporters consume this format; the results JSON is richer but far less portable.
 - `coverage` (`true` or `false`, default `true`): Collect line coverage and upload it. Coverage is collected on every matrix leg that can do it — the instrumentation requires Julia 1.11 or newer, so older legs are skipped with a notice in the job log rather than uploading an empty report. Set this to `false` to switch coverage off entirely, in which case no `codecov_token` is needed. Where it is uploaded is `coverage-target`'s job.
-- `coverage-target` (string, default `"auto"`): Where the coverage goes — `auto`, `codecov`, `github`, `both` or `none`. `auto` asks GitHub whether [Code Quality](https://docs.github.com/en/code-security/concepts/code-quality/code-quality) is enabled on the repository and uploads there when it is, falling back to Codecov when it is not, so a repository that has not opted in behaves exactly as it did before. `github` uploads a Cobertura report with [`actions/upload-code-coverage`](https://github.com/actions/upload-code-coverage), which puts line coverage and per-file deltas on the pull request and lets a `Restrict code coverage` ruleset gate merges on it. See [GitHub Code Quality coverage](#github-code-quality-coverage).
+- `coverage-target` (string, default `"codecov"`): Where the coverage goes — `codecov`, `github`, `both` or `none`. `github` uploads a Cobertura report with [`actions/upload-code-coverage`](https://github.com/actions/upload-code-coverage), which puts line coverage and per-file deltas on the pull request and lets a `Restrict code coverage` ruleset gate merges on it; it requires [GitHub Code Quality](https://docs.github.com/en/code-security/concepts/code-quality/code-quality) to be enabled on the repository, and is never chosen for you — see [GitHub Code Quality coverage](#github-code-quality-coverage). `none` collects nothing and uploads nowhere, unless an explicit output path below asks for a file anyway.
 - `coverage-lcov-path` (string, default `""`): Where to write the run's merged coverage in LCOV format. Empty means `lcov.info` in the workspace root, which is what gets uploaded to Codecov. Setting it explicitly also switches coverage on, even with `coverage: false`.
 - `coverage-cobertura-path` (string, default `""`): Where to write the run's merged coverage in Cobertura XML format, which GitHub Code Quality takes and LCOV consumers do not. Empty means `cobertura.xml` in the workspace root. Setting it explicitly writes the file whatever `coverage-target` says, and switches coverage on even with `coverage: false` — the LCOV path's opt-in, one format over.
 - `output-mode` (string, default `""`): Which captured test item output to echo into the job log — `issues` (only failing items), `all`, or `none`. Captured output is always present in the results JSON regardless. Empty leaves the `juliati` default.
@@ -73,10 +73,21 @@ Three things have to be true for it to work:
 
 1. **Code Quality is enabled on the repository** (Settings → Security → Code quality).
    It is a billed, per-active-committer feature, and an upload to a repository without
-   it is rejected. This is what `coverage-target: auto` checks, via
-   `GET /repos/{owner}/{repo}/code-quality/setup`; `gh api repos/OWNER/REPO/code-quality/setup --jq .state`
-   answers the same question from a terminal. Note that Code Quality's *analysis* half
-   supports neither Julia nor any plan to; only the coverage half is useful here.
+   it is rejected. Check with
+   `gh api repos/OWNER/REPO/code-quality/setup --jq .state`, which reports `configured`
+   or `not-configured` — note that this needs a personal access token, for the reason
+   below. Note too that Code Quality's *analysis* half supports neither Julia nor any
+   plan to; only the coverage half is useful here.
+
+   **The workflow cannot check this for you.** That endpoint is the only thing that
+   reports whether Code Quality is enabled, and it answers the Actions `GITHUB_TOKEN`
+   with `403 Resource not accessible by integration` — even under
+   `permissions: write-all`, which does grant `CodeQuality: write`. Nor does
+   `security_and_analysis` on the repository object carry a code quality field to fall
+   back on. `coverage-target` once had an `auto` value that tried exactly this and so
+   resolved to `codecov` everywhere, including on repositories that had Code Quality
+   switched on. Set the destination explicitly.
+
 2. **The caller grants `code-quality: write`.** The `permissions: write-all` in the
    examples above covers it. A caller that lists permissions individually has to add it.
 3. **The pull request is not from a fork.** A fork PR has no write access to the base
