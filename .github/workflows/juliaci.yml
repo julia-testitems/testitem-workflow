@@ -112,14 +112,16 @@ on:
         type: string
         required: false
         default: ""
-      # Where the coverage goes. `auto` asks GitHub whether Code Quality is enabled on
-      # this repository and uploads there when it is, falling back to Codecov when it is
-      # not -- which is every repository that has not opted in, so the default is the
-      # behaviour that was here before. `codecov`, `github`, `both` and `none` force it.
+      # Where the coverage goes: `codecov`, `github`, `both` or `none`. Always explicit.
+      # This used to have an `auto` default that asked GitHub whether Code Quality was
+      # enabled here and picked the destination itself. It could never work: the setup
+      # endpoint refuses the Actions token (see the validation step below), so `auto`
+      # resolved to `codecov` on every repository including the ones that had Code
+      # Quality switched on.
       coverage-target:
         type: string
         required: false
-        default: "auto"
+        default: "codecov"
       output-mode:
         type: string
         required: false
@@ -648,34 +650,32 @@ jobs:
       # Deliberately not routed through `resolve`: like the other execution settings it
       # gets no per-trigger override, because where coverage is stored does not sensibly
       # differ between a draft PR and a push to main.
-      - name: Resolve the coverage target
+      #
+      # This job rather than the per-leg step, so a typo costs one error here instead of
+      # an identical annotation on every leg after the matrix has already run.
+      #
+      # There is deliberately no auto-detection. `GET /repos/{owner}/{repo}/code-quality/setup`
+      # is the only thing that reports whether Code Quality is enabled, and it answers the
+      # Actions token with 403 `Resource not accessible by integration` -- even under
+      # `permissions: write-all`, which does grant `CodeQuality: write`. A personal access
+      # token reads it fine, so the endpoint is user-scoped rather than app-scoped, and
+      # `security_and_analysis` on the repository object carries no code quality field to
+      # fall back on. Anything that tried to guess the destination would guess `codecov`
+      # every time, on repositories that had Code Quality switched on too.
+      - name: Validate the coverage target
         id: coverage-target
         shell: bash
         env:
           TARGET: ${{ inputs.coverage-target }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           target="$TARGET"
           case "$target" in
-            auto|codecov|github|both|none) ;;
+            codecov|github|both|none) ;;
             *)
-              echo "::error::Unknown coverage-target '$target' (expected auto, codecov, github, both or none)."
+              echo "::error::Unknown coverage-target '$target' (expected codecov, github, both or none)."
               exit 1
               ;;
           esac
-          if [[ "$target" == "auto" ]]; then
-            # GitHub Code Quality has to be enabled on the repository before a coverage
-            # upload can be stored. Guessing wrong towards `github` would put an
-            # ::error:: annotation on every leg of every run of every repository that
-            # has not opted in, so an unreadable or absent setting falls back to Codecov.
-            state=$(gh api "repos/${GITHUB_REPOSITORY}/code-quality/setup" --jq ".state" 2>/dev/null || echo "")
-            if [[ "$state" == "configured" ]]; then
-              target=github
-            else
-              target=codecov
-            fi
-            echo "::notice::coverage-target 'auto' resolved to '$target' (code quality setup: ${state:-unavailable})."
-          fi
           echo "target=$target" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v7
       - uses: julia-actions/julia-compute-test-matrix@v2
