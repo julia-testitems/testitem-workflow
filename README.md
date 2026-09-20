@@ -47,8 +47,10 @@ The `juliaci.yml` workflow accepts a number of configuration options that contro
 - `instantiate-project` (`true` or `false`, default `false`): Resolve and instantiate the checkout's own project in place before the test items run, writing a `Manifest.toml` into the tree and installing its dependencies into the depot. The test items themselves never need this — their test processes instantiate a sandbox environment of their own — but that sandbox lives outside the tree, so a test item that spawns its own `julia --project=<checkout>` child process leaves that child with only the tree to resolve against, and without this it fails with "Package X is required but does not seem to be installed". Turn this on if your test items (or scripts they drive) launch Julia against the repository root.
 - `testitem-timeout` (string, default `""`): Per test item timeout in seconds. If a single test item takes longer than this duration, it is terminated and reported as errored. Unset by default: a test item can legitimately take arbitrarily long, and a timeout that fires is unrecoverable, so this workflow does not impose a deadline you did not ask for. Set it when you want a hang diagnosed — on a timeout the worker dumps task backtraces and a CPU profile into the item's output, which you get no other way. Without one, a hung item runs until the job hits its own `timeout-minutes` (GitHub default: 360 minutes) and nothing identifies which item hung.
 - `junit-path` (string, default `""`): Path to write the test results as JUnit XML. Most CI test reporters consume this format; the results JSON is richer but far less portable.
-- `coverage` (`true` or `false`, default `true`): Collect line coverage and upload it to Codecov. Coverage is collected on every matrix leg that can do it — the instrumentation requires Julia 1.11 or newer, so older legs are skipped with a notice in the job log rather than uploading an empty report. Set this to `false` to switch coverage off entirely, in which case no `codecov_token` is needed.
+- `coverage` (`true` or `false`, default `true`): Collect line coverage and upload it. Coverage is collected on every matrix leg that can do it — the instrumentation requires Julia 1.11 or newer, so older legs are skipped with a notice in the job log rather than uploading an empty report. Set this to `false` to switch coverage off entirely, in which case no `codecov_token` is needed. Where it is uploaded is `coverage-target`'s job.
+- `coverage-target` (string, default `"auto"`): Where the coverage goes — `auto`, `codecov`, `github`, `both` or `none`. `auto` asks GitHub whether [Code Quality](https://docs.github.com/en/code-security/concepts/code-quality/code-quality) is enabled on the repository and uploads there when it is, falling back to Codecov when it is not, so a repository that has not opted in behaves exactly as it did before. `github` uploads a Cobertura report with [`actions/upload-code-coverage`](https://github.com/actions/upload-code-coverage), which puts line coverage and per-file deltas on the pull request and lets a `Restrict code coverage` ruleset gate merges on it. See [GitHub Code Quality coverage](#github-code-quality-coverage).
 - `coverage-lcov-path` (string, default `""`): Where to write the run's merged coverage in LCOV format. Empty means `lcov.info` in the workspace root, which is what gets uploaded to Codecov. Setting it explicitly also switches coverage on, even with `coverage: false`.
+- `coverage-cobertura-path` (string, default `""`): Where to write the run's merged coverage in Cobertura XML format, which GitHub Code Quality takes and LCOV consumers do not. Empty means `cobertura.xml` in the workspace root. Setting it explicitly writes the file whatever `coverage-target` says, and switches coverage on even with `coverage: false` — the LCOV path's opt-in, one format over.
 - `output-mode` (string, default `""`): Which captured test item output to echo into the job log — `issues` (only failing items), `all`, or `none`. Captured output is always present in the results JSON regardless. Empty leaves the `juliati` default.
 - `threads` (string, default `""`): Value for the test processes' `--threads`, for example `4`, `auto`, or `2,1`. Empty leaves Julia's default.
 - `gc-between-testitems` (string, default `""`): `true` or `false` to force a full garbage collection between test items. Empty leaves the default, which is on whenever more than one test process is used.
@@ -58,7 +60,37 @@ The `juliaci.yml` workflow accepts a number of configuration options that contro
 
 These describe how the test processes behave rather than how much gets tested, so unlike `filter` and `testitem-timeout` they have no per-trigger (`pr-`, `main-`, …) overrides.
 
-The `codecov_token` secret is only used when coverage is collected; a repository that sets `coverage: false` can leave it out.
+The `codecov_token` secret is only used when coverage is uploaded to Codecov; a repository that sets `coverage: false`, or `coverage-target: github`, can leave it out.
+
+## GitHub Code Quality coverage
+
+GitHub can store coverage itself, rather than at Codecov: a `github-code-quality[bot]`
+comment on the pull request with aggregate and per-file line coverage against the
+default branch, and a `Restrict code coverage` branch ruleset that blocks a merge below
+a minimum percentage or beyond a maximum drop.
+
+Three things have to be true for it to work:
+
+1. **Code Quality is enabled on the repository** (Settings → Security → Code quality).
+   It is a billed, per-active-committer feature, and an upload to a repository without
+   it is rejected. This is what `coverage-target: auto` checks, via
+   `GET /repos/{owner}/{repo}/code-quality/setup`; `gh api repos/OWNER/REPO/code-quality/setup --jq .state`
+   answers the same question from a terminal. Note that Code Quality's *analysis* half
+   supports neither Julia nor any plan to; only the coverage half is useful here.
+2. **The caller grants `code-quality: write`.** The `permissions: write-all` in the
+   examples above covers it. A caller that lists permissions individually has to add it.
+3. **The pull request is not from a fork.** A fork PR has no write access to the base
+   repository, so the upload action skips it with a notice rather than failing the job.
+   Merge queue runs are skipped for the same reason Codecov does not need them.
+
+Each matrix leg uploads its own report under a label of its own
+(`code-coverage/julia-<os>-<channel>`), mirroring what the Codecov upload does. GitHub
+keys a report by commit and label, so legs sharing a label would overwrite each other
+and only the last one to finish would survive.
+
+An upload never fails a test leg: `fail-on-error: false` turns a rejected upload into an
+`::error::` annotation in the job log. That annotation is how a repository that forced
+`coverage-target: github` without enabling Code Quality finds out.
 
 ## Cancelling runs for closed pull requests
 

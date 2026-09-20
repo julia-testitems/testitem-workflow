@@ -4,6 +4,23 @@
 
 ### Added
 
+- **Coverage can now go to GitHub Code Quality instead of Codecov.** GitHub stores
+  coverage itself now: a bot comment on the pull request with aggregate and per-file
+  line coverage against the default branch, and a `Restrict code coverage` ruleset that
+  can gate merges on it. It takes Cobertura XML, which nothing in this stack could
+  produce. A new `coverage-target` input (`auto`, `codecov`, `github`, `both`, `none`)
+  picks the destination, and `coverage-cobertura-path` says where the Cobertura report
+  is written. The default, `auto`, asks GitHub whether Code Quality is enabled on the
+  repository and uploads there when it is, falling back to Codecov when it is not — so
+  a repository that has not opted in behaves exactly as it did before, with no
+  `::error::` annotations for uploading into a feature nobody turned on. Each matrix leg
+  uploads under a label of its own, because GitHub keys a report by commit and label and
+  legs sharing one would overwrite each other. A failed upload is an annotation, never a
+  failed test leg. Fork pull requests and merge queue runs are skipped by the upload
+  action itself. Requires `code-quality: write`, which the `permissions: write-all` in
+  the documented caller covers. See the new **GitHub Code Quality coverage** section of
+  the README.
+
 - **Versioned documentation now deploys for release tags — without a `DOCUMENTER_KEY`.**
   Two things conspired to keep release docs from ever being built: the recommended
   caller workflow had no `tags:` trigger, and the tags TagBot creates could not use one
