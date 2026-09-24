@@ -102,6 +102,14 @@
   branch pushes — a tag names a commit that already went through CI on its branch, so
   re-running the whole matrix on it bought nothing but CI minutes.
 
+- The README now documents `max-workers`, which the workflow already passed on, and
+  describes the test-item stack's new defaults, which apply once `julia-run-testitems`
+  picks them up: the default worker count is also capped at one test process per 3 GiB
+  of system memory (2 instead of 3 on GitHub's 7 GB macOS arm64 runners, where 3
+  thrashed memory); GC between test items is off by default, since it slowed CI runs by
+  about 26% without reducing memory use; and `memory-threshold` measures each test
+  process's own resident memory rather than system-wide use. No workflow logic changes.
+
 ### Fixed
 
 - **GitHub's "Re-run failed jobs" now works.** A partial re-run keeps the same run id
