@@ -973,6 +973,10 @@ jobs:
           files: "docs/make.jl"
       - uses: julia-actions/cache@v3
         if: steps.check_files.outputs.files_exists == 'true'
+      - uses: julia-actions/install-juliaup@v3
+        with:
+          channel: release
+        if: steps.check_files.outputs.files_exists == 'true'
       # No `julia-buildpkg`: the docs build develops the package into `docs/` and
       # instantiates that environment, which resolves, downloads and builds
       # everything it needs, including the package's own dependencies.
@@ -1040,6 +1044,10 @@ jobs:
         with:
           files: "docs/make.jl"
       - uses: julia-actions/cache@v3
+        if: steps.check_files.outputs.files_exists == 'true'
+      - uses: julia-actions/install-juliaup@v3
+        with:
+          channel: release
         if: steps.check_files.outputs.files_exists == 'true'
       # No `julia-buildpkg`: the docs build develops the package into `docs/` and
       # instantiates that environment, which resolves, downloads and builds
